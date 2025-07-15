@@ -1,0 +1,9 @@
+{
+    "global_settings": {
+        "name": "Template Name",
+        "target_playlist_id": "Target Playlist ID",
+        "selector": "all_videos"
+    },
+    "channels": {
+    }
+}
