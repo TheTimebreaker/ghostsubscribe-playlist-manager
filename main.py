@@ -771,10 +771,11 @@ class AddToPlaylistWindow(SubWindow): #pylint:disable=too-many-instance-attribut
 
         match source:
             case 'Video':
-                if not youtube.Video(src_id).verify():
+                v = youtube.Video(src_id)
+                if not v.verify():
                     messagebox.showerror('ERROR', 'The entered source Video ID is invalid. Please enter a valid ID!')
                     return
-                success = youtube.add_video_to_playlist(src_video_id= src_id, target_playlist = target)
+                success = youtube.add_video_to_playlist(src_video_id= v.id, target_playlist = target)
             case 'Playlist':
                 p = youtube.Playlist(src_id)
                 if not p.verify():
