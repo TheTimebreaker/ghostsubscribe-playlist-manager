@@ -73,8 +73,14 @@ On your first use (and every now and then) using this tool will require you to a
 
 The individual tools are supposed to be self-explanatory, so if something is not, feel free to [create an issue](https://github.com/TheTimebreaker/ghostsubscribe-playlist-manager/issues) and describe misunderstanding ^^
 
+All fields regarding a Video, Playlist or Channel accept the specific ID (e.g. video ID), a full URL to the thing and handles for channels (e.g. @channel_name).
+
 ### Add to playlist
-TODO
+The top half is dedicated to selecting which type of content (`Video`, `Playlist` or `Channel Uploads`) you want to add to a playlist. Choosing `Channel Uploads` will display a selector, where you can choose to add all videos or a subset of videos.
+
+The bottom half allows you to specify the target playlist.
+
+All selected fields will be checked for completeness and will be verified before anything else is done. This will prevent sending broken requests to YouTube and using your API quota unnecessarily. After clicking `Confirm`, you need to wait for a moment until the tool has finished adding everything, after which you will be informed of a success.
 
 ### Auto adder
 TODO

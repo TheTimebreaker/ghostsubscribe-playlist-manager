@@ -473,6 +473,7 @@ class CreateNewAutoAdd(SubWindow):
     def on_cancel(self) -> None:
         self.window.destroy()
         AutoAddWindow(self.root)
+
 class AutoAddWindow(SubWindow): #pylint:disable=too-many-instance-attributes
     def __init__(self, root:tk.Tk, rundirectly:bool = False) -> None:
         self.root = root
@@ -643,7 +644,6 @@ class AutoAddWindow(SubWindow): #pylint:disable=too-many-instance-attributes
         self.progressbar['maximum'] = total
         self.progressbar['value'] = progress+1
         self.progress_label.config(text=f"{progress+1} / {total} - {msg}")
-
 
 class AddToPlaylistWindow(SubWindow): #pylint:disable=too-many-instance-attributes
     def __init__(self, root:tk.Tk) -> None:
