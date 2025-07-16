@@ -131,7 +131,7 @@ class ConfigureSpecificAutoAdd(SubWindow):
         )
 
         self.cfg_target_id = tk.StringVar(self.window, value= self.old_cfg.global_settings.target_playlist_id)
-        ttk.Label(global_config_section, text= 'Target Playlist ID', width= label_width).grid(
+        ttk.Label(global_config_section, text= 'Target Playlist', width= label_width).grid(
             row = 1, column= 0, padx = self.padx, pady = self.pady, sticky='w'
         )
         ttk.Entry(global_config_section, textvariable= self.cfg_target_id, width= self.btn_width).grid(
@@ -162,7 +162,7 @@ class ConfigureSpecificAutoAdd(SubWindow):
         add_new_frame = ttk.Frame(self.window, border=0)
         add_new_frame.pack(fill= 'x')
         self.add_new_channel_id = tk.StringVar(self.window)
-        ttk.Label(add_new_frame, text= 'Channel ID', width= label_width).grid(
+        ttk.Label(add_new_frame, text= 'Channel ID / URL', width= label_width).grid(
             row = 0, column= 0, padx = self.padx, pady = self.pady, sticky='w'
         )
         ttk.Entry(add_new_frame, textvariable= self.add_new_channel_id, width= self.btn_width).grid(
@@ -249,7 +249,7 @@ class ConfigureSpecificAutoAdd(SubWindow):
                 'The Channel ID you entered could not be verified and is invalid. Please enter a valid Channel ID!'
             )
             return
-        if channel_id in self.old_cfg.channels.keys():
+        if c.id in self.old_cfg.channels.keys():
             messagebox.showerror(
                 'Error: Entry exists',
                 'The Channel ID you entered already exists in the data and therefore cannot be added again!'
@@ -278,7 +278,7 @@ class ConfigureSpecificAutoAdd(SubWindow):
                 selector = selector
             )
         )
-        self.new_cfg.channels[channel_id] = new_channel
+        self.new_cfg.channels[c.id] = new_channel
         self.add_new_channel_id.set('')
         self.add_new_channel_name.set('')
         self.add_new_selector.set(self.cfg_selector.get())
@@ -303,8 +303,16 @@ class ConfigureSpecificAutoAdd(SubWindow):
             elif result is False: #Wanna discard: NO
                 return False
 
+        target_p = youtube.Playlist(self.cfg_target_id.get())
+        if not target_p.verify():
+            messagebox.showerror(
+                'Error: Target Playlist is invalid',
+                'The entered target playlist could not be verified. Please enter a valid playlist ID or URL.'
+                )
+
+
         self.new_cfg.global_settings.name = self.cfg_name.get()
-        self.new_cfg.global_settings.target_playlist_id = self.cfg_target_id.get()
+        self.new_cfg.global_settings.target_playlist_id = target_p.id
         cfg_selector = cast(auto_adder.ChannelUploadFilter, self.cfg_selector.get())
         self.new_cfg.global_settings.selector = cfg_selector
         auto_adder.write_settings(self.filepath, self.new_cfg)
