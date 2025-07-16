@@ -2,6 +2,7 @@ import os
 import logging
 from typing import Generator, Literal, Optional, Any
 import json
+import re
 from dotenv import load_dotenv
 
 from google.auth.transport.requests import Request
@@ -120,9 +121,16 @@ class Youtube:
         return creds
 
 class Video(Youtube):
+    VIDEO_PATTERN = r'(?:https?://(?:www\.)?(?:(?:youtube\.com/(?:watch\?v=|shorts/)|youtu.be/)))?([\w\-]{11})'
     def __init__(self, video_id:str):
         super().__init__()
-        self.id = video_id
+        self.id = self._get_id(video_id)
+    def _get_id(self, string:str) -> str:
+        matched = re.match(self.VIDEO_PATTERN, string)
+        if matched:
+            return matched.group(1)
+
+        return string
     def get_data(
             self,
             part:list[
@@ -163,9 +171,16 @@ class Video(Youtube):
             return False
 
 class Playlist(Youtube):
+    PLAYLIST_PATTERN = r'https?://(?:www\.)?youtube\.com/playlist\?list=([\w\-]+)'
     def __init__(self, playlist_id:str):
         super().__init__()
-        self.id = playlist_id
+        self.id = self._get_id(playlist_id)
+    def _get_id(self, string:str) -> str:
+        matched = re.match(self.PLAYLIST_PATTERN, string)
+        if matched:
+            return matched.group(1)
+
+        return string
     def yield_elements(
             self,
             part:list[
@@ -259,10 +274,35 @@ class Playlist(Youtube):
             return False
 
 class Channel(Youtube):
+    CHANNEL_ID_PATTERN = r'https?://(?:www\.)?youtube\.com/channel/(UC[\w\-]{22})$'
+    CHANNEL_HANDLE_PATTERN = r'https?://(?:www\.)?youtube\.com/(@[\w\-]+)$'
     def __init__(self, channel_id:str):
         super().__init__()
-        self.id = channel_id
+        self.id = self._get_id(channel_id)
         self.playlist_upload_id:Optional[str] = None
+    def _get_id(self, string:str) -> str:
+        matched = re.match(self.CHANNEL_ID_PATTERN, string)
+        if matched:
+            return matched.group(1)
+
+        matched = re.match(self.CHANNEL_HANDLE_PATTERN, string)
+        if matched:
+            return self._convert_handle_to_id(matched.group(1))
+
+        if string.startswith('@'):
+            return self._convert_handle_to_id(string)
+
+        return string
+    def _convert_handle_to_id(self, handle:str) -> str:
+        request = self.build.channels().list( #pylint:disable=no-member
+            part='id',
+            forHandle = handle,
+        )
+        response = request.execute()
+        if response and 'items' in response and 'id' in response['items'][0]:
+            return response['items'][0]['id']
+        raise UnskippableException(f'Some unknown BS happened while turning a Channel handle into a Channel ID. Response: {response}')
+
     def get_data(
             self,
             part: list[
