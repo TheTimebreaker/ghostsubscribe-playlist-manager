@@ -404,7 +404,7 @@ class CreateNewAutoAdd(SubWindow):
             row = 1, column = 1, padx= self.padx, pady= self.pady
         )
 
-        ttk.Label(textfield_frame, text= 'Target Playlist ID:', width= self.label_width).grid(
+        ttk.Label(textfield_frame, text= 'Target Playlist:', width= self.label_width).grid(
             row = 2, column= 0, sticky='w', padx= self.padx, pady= self.pady
         )
         self.target_playlist_var = tk.StringVar(self.window)
@@ -447,14 +447,14 @@ class CreateNewAutoAdd(SubWindow):
             messagebox.showerror('Error', 'Please enter a name for the new auto adder.')
             return
         if not self.target_playlist_var.get():
-            messagebox.showerror('Error', 'Please enter the target playlist ID for the new auto adder.')
+            messagebox.showerror('Error', 'Please enter the target playlist for the new auto adder.')
             return
         fn = self.filename_var.get() + '.json'
         name = self.name_var.get()
         target = self.target_playlist_var.get()
         p = youtube.Playlist(target)
         if not p.verify():
-            messagebox.showerror('Error', 'The target playlist ID entered is invalid.')
+            messagebox.showerror('Error', 'The target playlist entered is invalid.')
             return
         if os.path.isfile(f'auto_adder_config/{fn}'):
             messagebox.showerror('Error', 'The filename entered already exists, please enter a different one.')
@@ -464,7 +464,7 @@ class CreateNewAutoAdd(SubWindow):
             self.selector.get() #type:ignore
         ).lower().replace(' ', '_')
         selector = cast(auto_adder.ChannelUploadFilter, selector)
-        auto_adder.create(filename= fn, name= name, target_playlist_id= target, selector= selector)
+        auto_adder.create(filename= fn, name= name, target_playlist_id= p.id, selector= selector)
 
         messagebox.showinfo('Success', 'New auto adder successfully created!')
 
