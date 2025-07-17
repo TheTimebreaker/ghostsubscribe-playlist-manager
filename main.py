@@ -639,6 +639,9 @@ class AutoAddWindow(SubWindow): #pylint:disable=too-many-instance-attributes
             button.config(style = 'Failure.TButton')
             self.enable_buttons()
             return False
+        except youtube.UnskippableException:
+            logging.error('Unskippable exception caught - exiting.')
+            return False
 
     def _update_progress(self, msg:str, progress:int, total:int) -> None:
         self.progressbar['maximum'] = total

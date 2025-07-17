@@ -15,9 +15,11 @@ class UnskippableException(Exception):
     pass
 class SkippableException(Exception):
     pass
-class ResourceNotFoundException(SkippableException):
+class ResourceNotFound(SkippableException):
     pass
-class InvalidValueException(SkippableException):
+class InvalidValue(SkippableException):
+    pass
+class Quota(UnskippableException):
     pass
 
 def wrap_execute(request:Any) -> Any:
@@ -29,17 +31,19 @@ def wrap_execute(request:Any) -> Any:
             status = e.resp.status
             reason = e.error_details[0] if hasattr(e, "error_details") else str(e)
             logging.error("[YouTube API Error] Status %s: %s", status, reason)
-            # if status == 403:
-            #     print("Quota or permissions issue.")
+            if status == 403 and """The request cannot be completed because you have exceeded your <a href="/youtube/v3/getting-started#quota">quota</a>.""" in str(reason):
+                logging.error("Quota issue.")
+                raise Quota from e
             if status == 404 and "The playlist identified with the request's <code>playlistId</code> parameter cannot be found." in str(reason):
                 logging.warning("Resource not found.")
-                raise ResourceNotFoundException from e
+                raise ResourceNotFound from e
             elif status == 400 and "Invalid Value" in str(reason):
                 logging.warning("Invalid Value.")
-                raise ResourceNotFoundException from e
+                raise ResourceNotFound from e
             # elif status == 400:
             #     print("Bad request.")
-            raise
+            else:
+                raise UnskippableException('Uncaught exception :(') from e
     request.execute = wrapped_execute
     return request
 
@@ -204,6 +208,7 @@ class Playlist(Youtube):
                 pageToken=next_page_token
             )
             response = request.execute()
+            logging.info(json.dumps(response, indent= 4))
             yield from response['items']
 
             next_page_token = response.get("nextPageToken")
@@ -270,7 +275,7 @@ class Playlist(Youtube):
             )
             request.execute()
             return True
-        except (ResourceNotFoundException, InvalidValueException):
+        except (ResourceNotFound, InvalidValue):
             return False
 
 class Channel(Youtube):
@@ -335,7 +340,7 @@ class Channel(Youtube):
                 'items/contentDetails/relatedPlaylists/uploads'
             )
             if not data:
-                raise ResourceNotFoundException(
+                raise ResourceNotFound(
                     f'Upload playlist of {self.id} could not be found due to an empty data response. '
                     'Channel deleted? Potential workaround: set channel settings to "all_videos".'
                 )
@@ -385,7 +390,7 @@ class Channel(Youtube):
         '''Returns video ID list of uploads, NEWEST FIRST.'''
         result:list[str] = []
         p = self.get_upload_playlist(full_videos_only=full_videos_only, livestreams_only=livestreams_only, shorts_only=shorts_only)
-        for video_element in p.yield_elements(part=['snippet'], fields='items/snippet/resourceId/videoId'):
+        for video_element in p.yield_elements(part=['snippet'], fields='items/snippet/resourceId/videoId,prevPageToken,nextPageToken'):
             video_id = video_element['snippet']['resourceId']['videoId']
             result.append(video_id)
             if size and len(result) >= size:
@@ -418,7 +423,7 @@ def add_playlist_to_playlist(
         target_playlist = Playlist(target_playlist_id)
 
     success = True
-    for video_element in src_playlist.yield_elements(part=['snippet'], fields='items/snippet/resourceId/videoId'):
+    for video_element in src_playlist.yield_elements(part=['snippet'], fields='items/snippet/resourceId/videoId,prevPageToken,nextPageToken'):
         video_id = video_element['snippet']['resourceId']['videoId']
         success = bool(success * target_playlist.add_video(video_id))
     return success

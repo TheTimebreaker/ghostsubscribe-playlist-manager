@@ -76,29 +76,30 @@ def process(file:str, stop_event:Event) -> Generator[
         channel_selector = grab_specific_setting(global_settings, channel_elem.settings, 'selector')
 
         try:
-            p = youtube.Channel(channel_id).get_upload_playlist(
+            c = youtube.Channel(channel_id)
+            videos_to_add:list[str] = []
+            for video_id in c.list_uploads(
                 full_videos_only= channel_selector == 'full_videos_only',
                 livestreams_only= channel_selector == 'livestreams_only',
                 shorts_only= channel_selector == 'shorts_only'
-            )
-
-            videos_to_add:list[str] = []
-            for video_elem in p.yield_elements(['contentDetails'], 'items/contentDetails/videoId'):
+            ):
                 if stop_event.is_set():
                     raise ThreadStopped
-                video_id = video_elem['contentDetails']['videoId']
                 if video_id in channel_seen_list:
                     break
                 videos_to_add.append(video_id)
 
             success = True
-            for video_id in reversed(videos_to_add):
+            for i, video_id in enumerate(reversed(videos_to_add)):
                 if stop_event.is_set():
                     raise ThreadStopped
                 success = bool(success * target_playlist.add_video(video_id))
                 if success:
                     channel_seen_list.insert(0, video_id)
                     channel_seen_list = channel_seen_list[0:int(os.getenv('keep_video_ids', '50'))]
+                    if i > 15 and i % 10 == 0:
+                        data.channels[channel_id].seen_video_ids = channel_seen_list
+                        write_settings(file, data)                        
             if success:
                 data.channels[channel_id].seen_video_ids = channel_seen_list
                 write_settings(file, data)
