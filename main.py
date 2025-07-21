@@ -842,12 +842,17 @@ class RemovePlaylistEntriesUpToIndex(SubWindow): #pylint:disable=too-many-instan
 
         ttk.Label(self.source_section, text= 'Playlist ID:').grid(row= 0, column= 0, sticky='w', padx= self.padx, pady= self.pady)
         self.source_playlist_id = tk.StringVar()
-        ttk.Entry(self.source_section, textvariable= self.source_playlist_id).grid(row= 0, column= 1,sticky='ew', padx= self.padx, pady= self.pady)
+        ttk.Entry(self.source_section, textvariable= self.source_playlist_id, width= self.entry_width).grid(
+            row= 0, column= 1,sticky='ew', padx= self.padx, pady= self.pady
+        )
+        self.index = tk.IntVar()
+        ttk.Label(self.source_section, text= 'Remove this many videos:').grid(row= 1, column= 0, sticky='w', padx= self.padx, pady= self.pady)
+        ttk.Spinbox(self.source_section, textvariable= self.index, from_ = 1, to = 5000).grid(
+            row = 1, column= 1, sticky='ew', padx= self.padx, pady= self.pady
+        )
+
         self.source_section.pack(fill='x', expand= True)
 
-
-        self.index = tk.IntVar()
-        ttk.Spinbox(self.window, textvariable= self.index, from_ = 1, to = 5000).pack()
 
         ##### Logging field
         # Create and pack the log display
@@ -871,34 +876,40 @@ class RemovePlaylistEntriesUpToIndex(SubWindow): #pylint:disable=too-many-instan
         self.root.deiconify()
     def on_confirm(self) -> None:
         source_id = self.source_playlist_id.get()
-        # if not source_id:
-        #     messagebox.showerror('ERROR', 'No source playlist ID given. Please enter one before confirming.')
-        #     return
+        if not source_id:
+            messagebox.showerror('ERROR', 'No source playlist ID given. Please enter one before confirming.')
+            return
 
         source = youtube.Playlist(source_id)
-        # if not source.verify():
-        #     messagebox.showerror('ERROR', 'The entered source Playlist ID is invalid. Please enter a valid ID!')
-        #     return
-        
+        if not source.verify():
+            messagebox.showerror('ERROR', 'The entered source Playlist ID is invalid. Please enter a valid ID!')
+            return
+
         index = self.index.get()
-        print(index, type(index))
-        #TODO:: for video in playlist / get playlist+video id, remove it up until index
-        # for video_elem in source.yield_elements(part=['snippet'], fields = 'items/snippet/playlistId,prevPageToken,nextPageToken'):
-        #     print(video_elem['snippet']['playlistId'])
+        if index <= 0:
+            messagebox.showerror('ERROR', 'You need to remove atleast 1 video!')
+            return
 
+        success = True
+        for i, video_elem in enumerate(source.yield_elements(['id'])):
+            video_count = i+1
+            if video_count > index:
+                break
+            vp_id = video_elem['id']
+            success = bool(success * source.remove_video(video_playlist_id= vp_id))
 
-        # if success:
-        #     messagebox.showinfo(
-        #         'Adding video(s) was successfull!',
-        #         'All videos have been successfully added to your target playlist!'
-        #     )
-        #     self.window.destroy()
-        #     self.root.deiconify()
-        # else:
-        #     messagebox.showerror(
-        #         'Adding video(s) was unsuccessfull!',
-        #         'Unfortunately, there has been an issue with adding all videos to your target playlist :('
-        #     )
+        if success:
+            messagebox.showinfo(
+                'Removing video(s) was successfull!',
+                'All videos have been successfully removed from your target playlist!'
+            )
+            self.window.destroy()
+            self.root.deiconify()
+        else:
+            messagebox.showerror(
+                'Removing video(s) was unsuccessfull!',
+                'Unfortunately, there has been an issue with removing all videos from your target playlist :('
+            )
 
 
 class MainMenu:
