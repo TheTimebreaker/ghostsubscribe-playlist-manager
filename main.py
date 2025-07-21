@@ -261,12 +261,12 @@ class ConfigureSpecificAutoAdd(SubWindow):
         selector = cast(auto_adder.ChannelUploadFilter, selector)
         videolist = []
         if new_log_or_add == 'Add new videos':
-            videolist = c.list_uploads(
+            videolist = [x for x in c.list_uploads(
                 size = int(os.getenv('keep_video_ids', '45')),
                 full_videos_only= selector == 'full_videos_only',
                 livestreams_only= selector == 'livestreams_only',
                 shorts_only= selector == 'shorts_only'
-            )
+            )]
         elif new_log_or_add == 'Add all videos':
             pass
         else:
@@ -648,6 +648,9 @@ class AutoAddWindow(SubWindow): #pylint:disable=too-many-instance-attributes
         self.progressbar['value'] = progress+1
         self.progress_label.config(text=f"{progress+1} / {total} - {msg}")
 
+
+
+
 class AddToPlaylistWindow(SubWindow): #pylint:disable=too-many-instance-attributes
     def __init__(self, root:tk.Tk) -> None:
         self.root = root
@@ -818,6 +821,86 @@ class AddToPlaylistWindow(SubWindow): #pylint:disable=too-many-instance-attribut
                 'Unfortunately, there has been an issue with adding all videos to your target playlist :('
             )
 
+
+class RemovePlaylistEntriesUpToIndex(SubWindow): #pylint:disable=too-many-instance-attributes
+    def __init__(self, root:tk.Tk) -> None:
+        self.root = root
+        self.window = tk.Toplevel(self.root)
+        tk_root_styles(self.window)
+        self.window.protocol('WM_DELETE_WINDOW', self.on_close)
+        self.window.title('Remove Playlist entries up to index')
+        # self.window.minsize(400, 0)
+        self.entry_width = 80
+        self.label_width = 20
+
+        ##### Source options section
+        self.source_section_label = ttk.Label(self.window, text = "What's the playlist you want to target?")
+        self.source_section_label.pack(anchor='w', padx= self.padx, pady= self.pady)
+        self.source_section = ttk.Frame(self.window, width= 400)
+        self.source_section.columnconfigure(0, minsize= 160)
+        self.source_section.columnconfigure(1, weight= 1)
+
+        ttk.Label(self.source_section, text= 'Playlist ID:').grid(row= 0, column= 0, sticky='w', padx= self.padx, pady= self.pady)
+        self.source_playlist_id = tk.StringVar()
+        ttk.Entry(self.source_section, textvariable= self.source_playlist_id).grid(row= 0, column= 1,sticky='ew', padx= self.padx, pady= self.pady)
+        self.source_section.pack(fill='x', expand= True)
+
+
+        self.index = tk.IntVar()
+        ttk.Spinbox(self.window, textvariable= self.index, from_ = 1, to = 5000).pack()
+
+        ##### Logging field
+        # Create and pack the log display
+        self.log_display = ScrolledText(self.window, height = 10)
+        self.log_visible = False
+        self.setup_logging()
+
+        ttk.Separator(self.window, orient='horizontal').pack(fill='x', padx=self.padx, pady=self.pady)
+
+        ##### Confirm
+        # ttk.Button(self.window, text= 'Confirm', command= self.on_confirm, width= self.btn_width).pack(padx= self.padx, pady= self.pady)
+        self.button_frame = ttk.Frame(self.window)
+        self.button_frame.pack()
+        btn1 = ttk.Button(self.button_frame, style= 'Confirm.TButton', text= 'Confirm', command= self.on_confirm, width= self.btn_width//2)
+        btn2 = ttk.Button(self.button_frame, style= 'Exit.TButton', text= 'Cancel', command= self.on_cancel, width= self.btn_width//2)
+        btn1.grid(row = 0, column = 0, padx = self.padx, pady = self.pady, sticky= 'ew')
+        btn2.grid(row = 0, column = 1, padx = self.padx, pady = self.pady, sticky= 'ew')
+
+    def on_cancel(self) -> None:
+        self.window.destroy()
+        self.root.deiconify()
+    def on_confirm(self) -> None:
+        source_id = self.source_playlist_id.get()
+        # if not source_id:
+        #     messagebox.showerror('ERROR', 'No source playlist ID given. Please enter one before confirming.')
+        #     return
+
+        source = youtube.Playlist(source_id)
+        # if not source.verify():
+        #     messagebox.showerror('ERROR', 'The entered source Playlist ID is invalid. Please enter a valid ID!')
+        #     return
+        
+        index = self.index.get()
+        print(index, type(index))
+        #TODO:: for video in playlist / get playlist+video id, remove it up until index
+        # for video_elem in source.yield_elements(part=['snippet'], fields = 'items/snippet/playlistId,prevPageToken,nextPageToken'):
+        #     print(video_elem['snippet']['playlistId'])
+
+
+        # if success:
+        #     messagebox.showinfo(
+        #         'Adding video(s) was successfull!',
+        #         'All videos have been successfully added to your target playlist!'
+        #     )
+        #     self.window.destroy()
+        #     self.root.deiconify()
+        # else:
+        #     messagebox.showerror(
+        #         'Adding video(s) was unsuccessfull!',
+        #         'Unfortunately, there has been an issue with adding all videos to your target playlist :('
+        #     )
+
+
 class MainMenu:
     def __init__(self, root:tk.Tk) -> None:
         self.root = root
@@ -838,12 +921,22 @@ class MainMenu:
             command= self.auto_add_window,
             width= self.btn_width
         ).pack(padx= 5, pady= 5)
+        ttk.Button(
+            root,
+            text= 'Remove Playlist entries up to index',
+            command= self.remove_playlist_entries,
+            width= self.btn_width
+        ).pack(padx= 5, pady= 5)
+
     def add_to_playlist_window(self) -> None:
         self.root.withdraw()
         AddToPlaylistWindow(self.root)
     def auto_add_window(self) -> None:
         self.root.withdraw()
         AutoAddWindow(self.root)
+    def remove_playlist_entries(self) -> None:
+        self.root.withdraw()
+        RemovePlaylistEntriesUpToIndex(self.root)
     def on_close(self) -> None:
         self.root.destroy()
 

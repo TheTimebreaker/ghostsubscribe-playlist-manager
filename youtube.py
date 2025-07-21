@@ -386,16 +386,16 @@ class Channel(Youtube):
             full_videos_only:bool = False,
             livestreams_only:bool = False,
             shorts_only:bool = False
-        ) -> list[str]:
+        ) -> Generator[str, None, None]:
         '''Returns video ID list of uploads, NEWEST FIRST.'''
-        result:list[str] = []
         p = self.get_upload_playlist(full_videos_only=full_videos_only, livestreams_only=livestreams_only, shorts_only=shorts_only)
-        for video_element in p.yield_elements(part=['snippet'], fields='items/snippet/resourceId/videoId,prevPageToken,nextPageToken'):
-            video_id = video_element['snippet']['resourceId']['videoId']
-            result.append(video_id)
-            if size and len(result) >= size:
+        for i, video_element in enumerate(
+            p.yield_elements(part=['snippet'], fields='items/snippet/resourceId/videoId,prevPageToken,nextPageToken')
+        ):
+            if size and i+1 >= size: #i+1 so that size is the amount of IDs yielded
                 break
-        return result
+            video_id = video_element['snippet']['resourceId']['videoId']
+            yield video_id
 
     def verify(self) -> bool:
         result = self.get_data(['id'])

@@ -73,6 +73,7 @@ def process(file:str, stop_event:Event) -> Generator[
         channel_name = channel_elem.channel_name
         yield f'{process_name} \n {channel_name}', i, len(data.channels)
         channel_seen_list = channel_elem.seen_video_ids
+        logging.debug("Channel seen list: %s", channel_seen_list)
         channel_selector = grab_specific_setting(global_settings, channel_elem.settings, 'selector')
 
         try:
@@ -83,12 +84,12 @@ def process(file:str, stop_event:Event) -> Generator[
                 livestreams_only= channel_selector == 'livestreams_only',
                 shorts_only= channel_selector == 'shorts_only'
             ):
+                logging.info('Video ID: %s - %s', video_id, type(video_id))
                 if stop_event.is_set():
                     raise ThreadStopped
                 if video_id in channel_seen_list:
                     break
                 videos_to_add.append(video_id)
-
             success = True
             for i, video_id in enumerate(reversed(videos_to_add)):
                 if stop_event.is_set():
@@ -99,7 +100,7 @@ def process(file:str, stop_event:Event) -> Generator[
                     channel_seen_list = channel_seen_list[0:int(os.getenv('keep_video_ids', '50'))]
                     if i > 15 and i % 10 == 0:
                         data.channels[channel_id].seen_video_ids = channel_seen_list
-                        write_settings(file, data)                        
+                        write_settings(file, data)
             if success:
                 data.channels[channel_id].seen_video_ids = channel_seen_list
                 write_settings(file, data)
