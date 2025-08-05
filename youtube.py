@@ -6,6 +6,7 @@ import re
 from dotenv import load_dotenv
 
 from google.auth.transport.requests import Request
+from google.auth.exceptions import RefreshError
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow #type:ignore
 from googleapiclient.discovery import build #type:ignore
@@ -31,7 +32,10 @@ def wrap_execute(request:Any) -> Any:
             status = e.resp.status
             reason = e.error_details[0] if hasattr(e, "error_details") else str(e)
             logging.error("[YouTube API Error] Status %s: %s", status, reason)
-            if status == 403 and """The request cannot be completed because you have exceeded your <a href="/youtube/v3/getting-started#quota">quota</a>.""" in str(reason):
+            if status == 403 and (
+                """The request cannot be completed because you have """
+                """exceeded your <a href="/youtube/v3/getting-started#quota">quota</a>."""
+            ) in str(reason):
                 logging.error("Quota issue.")
                 raise Quota from e
             if status == 404 and "The playlist identified with the request's <code>playlistId</code> parameter cannot be found." in str(reason):
@@ -95,6 +99,15 @@ class Youtube:
                 timeout_seconds= 120
             )
             return creds
+        def get_valid_creds(creds:Optional[Credentials]) -> Credentials:
+            if creds and creds.expired:
+                if creds.refresh_token:
+                    try:
+                        creds.refresh(Request()) #type:ignore
+                        return creds
+                    except RefreshError: #This happens when the refresh token expires, which happens sometimes for some reason
+                        pass
+            return get_new_creds()
         def read_creds() -> Credentials:
             creds = Credentials.from_authorized_user_file( #type:ignore
                 client_token_path,
@@ -111,14 +124,7 @@ class Youtube:
             creds = read_creds()
 
         if not creds or not creds.valid:
-            if creds and creds.expired:
-                if creds.refresh_token:
-                    creds.refresh(Request()) #type:ignore
-                else:
-                    creds = get_new_creds()
-            else:
-                creds = get_new_creds()
-
+            creds = get_valid_creds(creds)
             with open(client_token_path, "w", encoding= 'utf-8') as token:
                 token.write(creds.to_json()) #type:ignore
 
