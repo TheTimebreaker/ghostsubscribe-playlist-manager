@@ -1,1 +1,0 @@
-.\.venv\Scripts\activate && py .\main.py && .\.venv\Scripts\deactivate
