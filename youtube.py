@@ -1,3 +1,4 @@
+from __future__ import annotations
 import os
 import logging
 from typing import Generator, Literal, Optional, Any
@@ -82,6 +83,10 @@ def build_with_wrapped_execute(*args: Any, **kwargs: Any) -> ServiceWrapper:
     return ServiceWrapper(build(*args, **kwargs))
 
 class Youtube:
+    VIDEO_PATTERN = r'(?:https?://(?:www\.)?(?:(?:youtube\.com/(?:watch\?v=|shorts/)|youtu.be/)))?([\w\-]{11})'
+    PLAYLIST_PATTERN = r'https?://(?:www\.)?youtube\.com/playlist\?list=([\w\-]+)'
+    CHANNEL_ID_PATTERN = r'https?://(?:www\.)?youtube\.com/channel/(UC[\w\-]{22})$'
+    CHANNEL_HANDLE_PATTERN = r'https?://(?:www\.)?youtube\.com/(@[\w\-]+)$'
     def __init__(self) -> None:
         load_dotenv()
         self.scope = ['https://www.googleapis.com/auth/youtube.force-ssl']
@@ -129,12 +134,29 @@ class Youtube:
                 token.write(creds.to_json()) #type:ignore
 
         return creds
+    def parse_any_url(self, url:str) -> Video | Playlist | Channel:
+        matched = re.match(self.VIDEO_PATTERN, url)
+        if matched:
+            return Video(matched.group(1))
+
+        matched = re.match(self.PLAYLIST_PATTERN, url)
+        if matched:
+            return Playlist(matched.group(1))
+
+        matched = re.match(self.CHANNEL_HANDLE_PATTERN, url)
+        if matched:
+            return Channel(matched.group(1))
+        matched = re.match(self.CHANNEL_ID_PATTERN, url)
+        if matched:
+            return Channel(matched.group(1))
+
+        raise SkippableException('No valid youtube URL.')
 
 class Video(Youtube):
-    VIDEO_PATTERN = r'(?:https?://(?:www\.)?(?:(?:youtube\.com/(?:watch\?v=|shorts/)|youtu.be/)))?([\w\-]{11})'
     def __init__(self, video_id:str):
         super().__init__()
         self.id = self._get_id(video_id)
+        self.url = f'https://www.youtube.com//watch?v={self.id}'
     def _get_id(self, string:str) -> str:
         matched = re.match(self.VIDEO_PATTERN, string)
         if matched:
@@ -181,7 +203,6 @@ class Video(Youtube):
             return False
 
 class Playlist(Youtube):
-    PLAYLIST_PATTERN = r'https?://(?:www\.)?youtube\.com/playlist\?list=([\w\-]+)'
     def __init__(self, playlist_id:str):
         super().__init__()
         self.id = self._get_id(playlist_id)
@@ -285,8 +306,6 @@ class Playlist(Youtube):
             return False
 
 class Channel(Youtube):
-    CHANNEL_ID_PATTERN = r'https?://(?:www\.)?youtube\.com/channel/(UC[\w\-]{22})$'
-    CHANNEL_HANDLE_PATTERN = r'https?://(?:www\.)?youtube\.com/(@[\w\-]+)$'
     def __init__(self, channel_id:str):
         super().__init__()
         self.id = self._get_id(channel_id)
