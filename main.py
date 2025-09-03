@@ -211,7 +211,7 @@ class ConfigureSpecificAutoAdd(SubWindow):
         separator.pack(fill='x', padx = self.padx, pady = self.pady)
 
 
-        ttk.Button(self.window, text= 'Open file', command= self.open_file, width= self.btn_width).pack(padx= self.padx, pady= self.pady)
+        ttk.Button(self.window, text= 'Save & Open file', command= self.open_file, width= self.btn_width).pack(padx= self.padx, pady= self.pady)
 
         self.button_frame = ttk.Frame(self.window)
         self.button_frame.pack()
@@ -224,14 +224,15 @@ class ConfigureSpecificAutoAdd(SubWindow):
         btn2.grid(row = 1, column = 1, padx = self.padx, pady = self.pady, sticky= 'ew')
 
     def open_file(self) -> None:
-        if platform.system() == 'Darwin':       # macOS
-            subprocess.call(('open', self.filepath))
-        elif platform.system() == 'Windows':    # Windows
-            os.startfile(self.filepath)
-        else:                                   # linux variants
-            subprocess.call(('xdg-open', self.filepath))
-        time.sleep(2)
-        self.on_close()
+        if self._save():
+            if platform.system() == 'Darwin':       # macOS
+                subprocess.call(('open', self.filepath))
+            elif platform.system() == 'Windows':    # Windows
+                os.startfile(self.filepath)
+            else:                                   # linux variants
+                subprocess.call(('xdg-open', self.filepath))
+            time.sleep(2)
+            self.on_close()
     def add_new_element(self) -> None:
         self.add_new.config(style='TButton')
         channel_id = self.add_new_channel_id.get()
