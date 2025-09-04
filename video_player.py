@@ -149,7 +149,7 @@ class VideoPlayer(SubWindow):
         stop_btn = tk.Button(self.controls, text="⏹ Stop", command=self.stop)
         next_btn = tk.Button(self.controls, text="⏭ Next", command=self.next)
         add_btn = tk.Button(self.controls, text="+ Add", command=self.add_file)
-        addyt_btn = tk.Button(self.controls, text="+ YT Video", command=self.add_yt_url)
+        addyt_btn = tk.Button(self.controls, text="+ YT Video", command=self.add_any_yt_url)
         self.playpause_btn.pack(side="left", padx=5, pady=5)
         stop_btn.pack(side="left", padx=5, pady=5)
         next_btn.pack(side="left", padx=5, pady=5)
@@ -216,7 +216,10 @@ class VideoPlayer(SubWindow):
             if playlist_was_empty:
                 self.play()
             self.print_that_shit()
-    def add_yt_url(self) -> None:
+    def add_any_yt_url(self) -> None:
+        """Opens up a dialog box that asks for a youtube link.
+        Will attempt to add the video, all video of the youtube playlist, or all channel uploads, depending on URL type.
+        """
         yturl = simpledialog.askstring(
             parent=self.window,
             title= 'Enter a YouTube URL:',
@@ -224,15 +227,25 @@ class VideoPlayer(SubWindow):
         )
         if yturl:
             obj = youtube.Youtube().parse_any_url(yturl)
-            if isinstance(obj, (youtube.Channel, youtube.Playlist)):
-                print('iterable')
+            if isinstance(obj, youtube.Channel):
+                pass
+            elif isinstance(obj, youtube.Playlist):
+                for video in obj.yield_elements(part=['snippet']):
+                    video_id = video['snippet']['resourceId']['videoId']
+                    youtube_url = f'https://youtube.com/watch?v={video_id}'
+                    self._add_yt_video(youtube_url)
             elif isinstance(obj, youtube.Video):
-                self._add_video_url(obj.url)
+                self._add_yt_video(obj.url)
             else:
                 print('why')
             self.print_that_shit()
-    def _add_video_url(self, yturl:str) -> None:
-        videourl, audiourl, metadata = get_yt_stream(yturl)
+    def _add_yt_video(self, url:str) -> None:
+        """Inner function that takes a youtube video link and adds it.
+
+        Args:
+            url (str): Video URL
+        """
+        videourl, audiourl, metadata = get_yt_stream(url)
         playlist_was_empty = self.playlist.count() == 0
         media = vlc.Media(self.instance, videourl)
         media.add_option(f":input-slave={audiourl}")

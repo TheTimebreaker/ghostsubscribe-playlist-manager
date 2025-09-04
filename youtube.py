@@ -156,7 +156,7 @@ class Video(Youtube):
     def __init__(self, video_id:str):
         super().__init__()
         self.id = self._get_id(video_id)
-        self.url = f'https://www.youtube.com//watch?v={self.id}'
+        self.url = f'https://www.youtube.com/watch?v={self.id}'
     def _get_id(self, string:str) -> str:
         matched = re.match(self.VIDEO_PATTERN, string)
         if matched:
