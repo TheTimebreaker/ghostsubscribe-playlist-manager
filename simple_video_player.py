@@ -80,7 +80,7 @@ def wait_for_event_once(em:vlc.EventManager, event_type:Any) -> None:
         em.event_detach(event_type)
 
 
-class PlaylistFrame(ttk.Frame):
+class PlaylistFrame(ttk.Frame): #pylint:disable=too-many-ancestors
     def __init__(
             self,
             parent:tk.Tk|tk.Toplevel,

@@ -13,7 +13,7 @@ def __load_colors() -> dict[str, str]:
             colors_path = 'colors/light.json'
     with open(colors_path, 'r', encoding= 'utf-8') as f:
         return json.load(f)
-    
+
 colors = __load_colors()
 
 

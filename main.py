@@ -183,12 +183,12 @@ class ConfigureSpecificAutoAdd(cf.SubWindow):
         selector = cast(auto_adder.ChannelUploadFilter, selector)
         videolist = []
         if new_log_or_add == 'Add new videos':
-            videolist = [x for x in c.list_uploads(
+            videolist = list(c.list_uploads(
                 size = int(os.getenv('keep_video_ids', '45')),
                 full_videos_only= selector == 'full_videos_only',
                 livestreams_only= selector == 'livestreams_only',
                 shorts_only= selector == 'shorts_only'
-            )]
+            ))
         elif new_log_or_add == 'Add all videos':
             pass
         else:
