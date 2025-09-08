@@ -842,6 +842,23 @@ class MainMenu:
         self.root.title('YouTube manager')
         self.btn_width:int = 50
 
+
+        self.menubar = tk.Menu(self.root)
+        self.menubar.config()
+        self.root.config(menu = self.menubar)
+        config_menubar = tk.Menu(self.menubar)
+        config_menubar.config(**cf.tk_styles(self.menubar))
+        config_menubar.add_command(
+            label= 'Show about',
+            command= self.about
+        )
+        self.menubar.add_cascade(
+            label= 'About',
+            menu= config_menubar,
+            # underline= 0
+        )
+
+
         ttk.Button(
             root,
             text= 'Add to Playlist',
@@ -867,6 +884,16 @@ class MainMenu:
             width= self.btn_width
         ).pack(padx= 5, pady= 5)
 
+    def about(self) -> None:
+        msg = '''Development:
+TheTimebreaker
+
+Contributors:
+TheTimebreaker
+
+Additional resources:
+http.cat/status/204 - Placeholder image for Simple Video Player'''
+        messagebox.showinfo(title='About', message=msg)
     def add_to_playlist_window(self) -> None:
         self.root.withdraw()
         AddToPlaylistWindow(self.root)
