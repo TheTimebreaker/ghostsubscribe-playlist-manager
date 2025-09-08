@@ -16,11 +16,9 @@ from dotenv import load_dotenv
 import youtube
 import auto_adder
 import centralfunctions as cf
-from colors import load_colors
+from colors import colors
 from simple_video_player import VideoPlayer
 
-if __name__ == '__main__':
-    colors = load_colors()
 
 class ConfigureSpecificAutoAdd(cf.SubWindow):
     def __init__(self, root:tk.Tk, filepath:str) -> None:

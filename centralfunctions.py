@@ -3,9 +3,7 @@ from tkinter import ttk, font
 from tkinter.scrolledtext import ScrolledText
 from typing import Any, get_args, Optional
 import logging
-from colors import load_colors
-if __name__ == '__main__':
-    colors = load_colors()
+from colors import colors
 
 
 def ttk_styles(root:tk.Tk) -> None:

@@ -14,13 +14,9 @@ from PIL import Image, ImageTk
 import requests
 import vlc
 import yt_dlp
-from dotenv import load_dotenv
 import centralfunctions as cf
-from colors import load_colors
+from colors import colors
 import youtube
-if __name__ == '__main__':
-    load_dotenv()
-    colors = load_colors()
 
 
 class YouTubeMetaData(TypedDict):
@@ -103,7 +99,7 @@ class PlaylistFrame(ttk.Frame):
 
         self.max_rows = max_rows
         self.row_height:Optional[int] = None
-        self.canvas = tk.Canvas(self, height=0, bg = colors['bg-3']) #pylint:disable=possibly-used-before-assignment
+        self.canvas = tk.Canvas(self, height=0, bg = colors['bg-3'])
         self.scrollbar = ttk.Scrollbar(self, orient="vertical", command=self.canvas.yview)
         self.scrollable_frame = ttk.Frame(self.canvas)
 

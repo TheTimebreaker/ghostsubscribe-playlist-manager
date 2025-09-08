@@ -2,7 +2,7 @@ import json
 import os
 from dotenv import load_dotenv
 
-def load_colors() -> dict:
+def __load_colors() -> dict[str, str]:
     theme = os.getenv('THEME', 'light')
     match theme:
         case 'light':
@@ -13,10 +13,13 @@ def load_colors() -> dict:
             colors_path = 'colors/light.json'
     with open(colors_path, 'r', encoding= 'utf-8') as f:
         return json.load(f)
+    
+colors = __load_colors()
+
 
 
 def main() -> None:
     load_dotenv()
-    load_colors()
+    __load_colors()
 if __name__ == '__main__':
     main()
