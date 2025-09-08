@@ -14,4 +14,5 @@ disable=
     too-many-positional-arguments,
     too-few-public-methods,
     no-else-return,
-    no-else-raise
+    no-else-raise,
+    possibly-used-before-assignment

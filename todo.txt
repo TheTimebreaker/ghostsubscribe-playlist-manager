@@ -1,0 +1,19 @@
+add progress bar
+add audio only
+# add media button support
+add arrow keys (skip 5secs)
+# add jdownlaoder button
+
+add remove from original playlist button
+add scrollbar colors
+
+# add exiting
+add UI updating in one batc (especially the PlaylistFrame)
+
+
+FEEDBACK AFTER USING:
+limit playlist view
+dont let it grow, fixed
+foxus should always be on currentitem
+
+ABOUT page

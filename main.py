@@ -9,101 +9,24 @@ from tkinter import messagebox
 from tkinter import ttk
 from tkinter.scrolledtext import ScrolledText
 from functools import partial
-from typing import cast, Callable, Any, get_args, Optional
+from typing import cast, Callable, Any, Optional
 import threading
 import logging
 from dotenv import load_dotenv
 import youtube
 import auto_adder
+import centralfunctions as cf
 from colors import load_colors
-colors = load_colors()
+from simple_video_player import VideoPlayer
 
-def is_valid_literal(val:str, literal_type:Any) -> bool:
-    return val in get_args(literal_type)
+if __name__ == '__main__':
+    colors = load_colors()
 
-class SubWindow:
-    window:tk.Toplevel
-    root:tk.Tk
-    log_level:int
-    log_visible:bool
-    log_display:ScrolledText
-    btn_width:int = 50
-    padx = 5
-    pady = 5
-
-    def setup_logging(self) -> None:
-        root_logger = logging.getLogger()
-        self.log_level = logging.ERROR
-        root_logger.setLevel(self.log_level)
-        handler = TkinterLogHandler(app = self, log_level= self.log_level) #type:ignore
-        root_logger.addHandler(handler)
-        # Avoid adding duplicate handlers
-        if not any(isinstance(h, TkinterLogHandler) for h in root_logger.handlers):
-            root_logger.addHandler(handler)
-
-    def on_close(self) -> None:
-        self.window.destroy()
-        self.root.destroy()
-
-    def show_log_if_needed(self, levelno:int, msg:str) -> None:
-        # Only show if severity is high enough and not already visible
-        if not self.log_visible and levelno >= self.log_level:
-            self.log_display.pack(padx=10, pady=10)
-            self.log_visible = True
-
-        # Append the log message
-        self.log_display.insert(tk.END, msg + '\n')
-        self.log_display.see(tk.END)
-
-class TkinterLogHandler(logging.Handler):
-    def __init__(self, app:SubWindow, log_level:int = logging.ERROR) -> None:
-        super().__init__()
-        self.app = app  # Reference to main app (which holds the widget)
-        self.level_threshold = log_level
-
-    def emit(self, record:logging.LogRecord) -> None:
-        msg = self.format(record)
-        self.app.log_display.after(0, self.app.show_log_if_needed, record.levelno, msg)
-
-class ToolTip:
-    def __init__(self, widget:Any, text:str) -> None:
-        self.widget = widget
-        self.text = text
-        self.tip_window:Optional[tk.Toplevel] = None
-
-        self.widget.bind("<Enter>", self.show_tip)
-        self.widget.bind("<Leave>", self.hide_tip)
-
-    def show_tip(self, _:Any = None) -> None:
-        if self.tip_window or not self.text:
-            return
-        x, y, _, _ = self.widget.bbox("insert") or (0, 0, 0, 0)
-        x += self.widget.winfo_rootx() + 20
-        y += self.widget.winfo_rooty() + 20
-
-        self.tip_window = tw = tk.Toplevel(self.widget)
-        tw.wm_overrideredirect(True)  # No window decorations
-        tw.wm_geometry(f"+{x}+{y}")
-
-        label = tk.Label(
-            tw, text=self.text, justify='left',
-            # background="#ffffe0", relief='solid', borderwidth=1,
-            background=colors['yellow-1'], relief='solid', borderwidth=1,
-            font=("tahoma", 8, "normal"),
-            foreground=colors['fg']
-        )
-        label.pack(ipadx=4, ipady=2)
-
-    def hide_tip(self, _:Any = None) -> None:
-        if self.tip_window:
-            self.tip_window.destroy()
-            self.tip_window = None
-
-class ConfigureSpecificAutoAdd(SubWindow):
+class ConfigureSpecificAutoAdd(cf.SubWindow):
     def __init__(self, root:tk.Tk, filepath:str) -> None:
         self.root = root
         self.window = tk.Toplevel(self.root)
-        tk_root_styles(self.window)
+        cf.tk_root_styles(self.window)
         self.window.protocol('WM_DELETE_WINDOW', self.on_close)
         self.window.title('Configure: Auto Adder')
 
@@ -149,7 +72,7 @@ class ConfigureSpecificAutoAdd(SubWindow):
             self.cfg_selector.get(),
             *options
         )
-        option_menu['menu'].configure(**tk_styles(option_menu['menu']))
+        option_menu['menu'].configure(**cf.tk_styles(option_menu['menu']))
         option_menu.grid(row = 2, column= 1, sticky= 'ew', padx = self.padx, pady = self.pady)
 
 
@@ -185,7 +108,7 @@ class ConfigureSpecificAutoAdd(SubWindow):
             self.add_new_selector.get(),
             *options
         )
-        option_menu['menu'].configure(**tk_styles(option_menu['menu']))
+        option_menu['menu'].configure(**cf.tk_styles(option_menu['menu']))
         option_menu.grid(row = 2, column= 1, sticky= 'ew', padx = self.padx, pady = self.pady)
 
         radioframe = ttk.Frame(self.window)
@@ -197,14 +120,14 @@ class ConfigureSpecificAutoAdd(SubWindow):
             variable= self.add_new_log_or_add_all,
         )
         tmp.grid(row= 0, column= 0, padx= self.padx*2, pady= self.pady)
-        ToolTip(tmp, 'This will only add future uploads of this channel to your playlist, but none of the already existing videos.')
+        cf.ToolTip(tmp, 'This will only add future uploads of this channel to your playlist, but none of the already existing videos.')
         tmp2 = ttk.Radiobutton(
             radioframe,
             text= 'Add all videos', value= 'Add all videos',
             variable= self.add_new_log_or_add_all,
         )
         tmp2.grid(row= 0, column= 1, padx= self.padx*2, pady= self.pady)
-        ToolTip(tmp2, 'This will add future uploads AND all existing videos to your playlist.')
+        cf.ToolTip(tmp2, 'This will add future uploads AND all existing videos to your playlist.')
 
 
         separator = ttk.Separator(self.window, orient='horizontal')
@@ -257,7 +180,7 @@ class ConfigureSpecificAutoAdd(SubWindow):
             )
             return
 
-        if not is_valid_literal(selector, auto_adder.ChannelUploadFilter): # some shit you need to do to make mypy happy
+        if not cf.is_valid_literal(selector, auto_adder.ChannelUploadFilter): # some shit you need to do to make mypy happy
             raise TypeError('how did we get here?') # some shit you need to do to make mypy happy
         selector = cast(auto_adder.ChannelUploadFilter, selector)
         videolist = []
@@ -326,11 +249,11 @@ class ConfigureSpecificAutoAdd(SubWindow):
         if self._save():
             self.on_close()
 
-class ConfigureAutoAdd(SubWindow):
+class ConfigureAutoAdd(cf.SubWindow):
     def __init__(self, root:tk.Tk) -> None:
         self.root = root
         self.window = tk.Toplevel(self.root)
-        tk_root_styles(self.window)
+        cf.tk_root_styles(self.window)
         self.window.protocol('WM_DELETE_WINDOW', self.on_close)
         self.window.title('Configure: Auto Adder')
 
@@ -376,11 +299,11 @@ class ConfigureAutoAdd(SubWindow):
         self.window.destroy()
         AutoAddWindow(self.root)
 
-class CreateNewAutoAdd(SubWindow):
+class CreateNewAutoAdd(cf.SubWindow):
     def __init__(self, root:tk.Tk) -> None:
         self.root = root
         self.window = tk.Toplevel(self.root)
-        tk_root_styles(self.window)
+        cf.tk_root_styles(self.window)
         self.window.protocol('WM_DELETE_WINDOW', self.on_close)
         self.window.title('Create: Auto Adder')
 
@@ -425,7 +348,7 @@ class CreateNewAutoAdd(SubWindow):
             self.selector.get(),
             *options
         )
-        option_menu['menu'].configure(**tk_styles(option_menu['menu']))
+        option_menu['menu'].configure(**cf.tk_styles(option_menu['menu']))
         option_menu.grid(
             row = 3, column= 1, padx = self.padx, pady = self.pady, sticky='ew'
         )
@@ -475,11 +398,11 @@ class CreateNewAutoAdd(SubWindow):
         self.window.destroy()
         AutoAddWindow(self.root)
 
-class AutoAddWindow(SubWindow): #pylint:disable=too-many-instance-attributes
+class AutoAddWindow(cf.SubWindow): #pylint:disable=too-many-instance-attributes
     def __init__(self, root:tk.Tk, rundirectly:bool = False) -> None:
         self.root = root
         self.window = tk.Toplevel(self.root)
-        tk_root_styles(self.window)
+        cf.tk_root_styles(self.window)
         self.window.protocol('WM_DELETE_WINDOW', self.on_close)
         self.window.title('Auto Adder')
         self.worker:threading.Thread
@@ -498,7 +421,7 @@ class AutoAddWindow(SubWindow): #pylint:disable=too-many-instance-attributes
         self.menubar.config()
         self.window.config(menu = self.menubar)
         config_menubar = tk.Menu(self.menubar)
-        config_menubar.config(**tk_styles(self.menubar))
+        config_menubar.config(**cf.tk_styles(self.menubar))
         config_menubar.add_command(
             label= 'Create new Auto Adder',
             command= self.create_new_auto_adder
@@ -652,11 +575,11 @@ class AutoAddWindow(SubWindow): #pylint:disable=too-many-instance-attributes
 
 
 
-class AddToPlaylistWindow(SubWindow): #pylint:disable=too-many-instance-attributes
+class AddToPlaylistWindow(cf.SubWindow): #pylint:disable=too-many-instance-attributes
     def __init__(self, root:tk.Tk) -> None:
         self.root = root
         self.window = tk.Toplevel(self.root)
-        tk_root_styles(self.window)
+        cf.tk_root_styles(self.window)
         self.window.protocol('WM_DELETE_WINDOW', self.on_close)
         self.window.title('Add to playlist')
         # self.window.minsize(400, 0)
@@ -823,11 +746,11 @@ class AddToPlaylistWindow(SubWindow): #pylint:disable=too-many-instance-attribut
             )
 
 
-class RemovePlaylistEntriesUpToIndex(SubWindow): #pylint:disable=too-many-instance-attributes
+class RemovePlaylistEntriesUpToIndex(cf.SubWindow): #pylint:disable=too-many-instance-attributes
     def __init__(self, root:tk.Tk) -> None:
         self.root = root
         self.window = tk.Toplevel(self.root)
-        tk_root_styles(self.window)
+        cf.tk_root_styles(self.window)
         self.window.protocol('WM_DELETE_WINDOW', self.on_close)
         self.window.title('Remove Playlist entries up to index')
         # self.window.minsize(400, 0)
@@ -916,7 +839,7 @@ class RemovePlaylistEntriesUpToIndex(SubWindow): #pylint:disable=too-many-instan
 class MainMenu:
     def __init__(self, root:tk.Tk) -> None:
         self.root = root
-        tk_root_styles(self.root)
+        cf.tk_root_styles(self.root)
         self.root.protocol('WM_DELETE_WINDOW', self.on_close)
         self.root.title('YouTube manager')
         self.btn_width:int = 50
@@ -939,6 +862,12 @@ class MainMenu:
             command= self.remove_playlist_entries,
             width= self.btn_width
         ).pack(padx= 5, pady= 5)
+        ttk.Button(
+            root,
+            text= 'Simple Video Player',
+            command= self.simple_video_player,
+            width= self.btn_width
+        ).pack(padx= 5, pady= 5)
 
     def add_to_playlist_window(self) -> None:
         self.root.withdraw()
@@ -949,24 +878,13 @@ class MainMenu:
     def remove_playlist_entries(self) -> None:
         self.root.withdraw()
         RemovePlaylistEntriesUpToIndex(self.root)
+    def simple_video_player(self) -> None:
+        self.root.withdraw()
+        VideoPlayer(self.root)
     def on_close(self) -> None:
         self.root.destroy()
 
-def tk_styles(element:tk.Menu) -> dict:
-    if isinstance(element, tk.Menu):
-        return {
-            'background': colors['bg-3'],
-            'foreground': colors['fg'],
-            'activebackground': colors['blue-2'],
-            'relief': 'flat'
-        }
-    raise TypeError('Styling for this class is not defined.')
 
-def tk_root_styles(root:tk.Tk|tk.Toplevel) -> None:
-    # custom_title_bar(root)
-    root.config(
-        bg = colors['bg-3']
-    )
 def custom_title_bar(root: tk.Tk | tk.Toplevel, title: str = 'testing') -> None:
     def start_move(event:Any) -> None:
         root._offset_x = event.x_root - root.winfo_x() #type:ignore #pylint:disable=protected-access
@@ -1011,124 +929,6 @@ def custom_title_bar(root: tk.Tk | tk.Toplevel, title: str = 'testing') -> None:
     title_label.bind("<ButtonRelease-1>", stop_move)
     title_label.bind("<Button-1>", start_move)
     title_label.bind("<B1-Motion>", do_move)
-def ttk_styles(root:tk.Tk) -> None:
-    style = ttk.Style(root)
-    style.theme_use('clam')
-    style.configure('TButton',
-        background = colors['bg-6'],
-        foreground = colors['fg'],
-    )
-    style.map('TButton',
-        background=[("active", colors['bg-8']), ("pressed", colors['bg-7']), ('disabled', colors['bg-3'])],
-        foreground=[("active", colors['fg']), ("pressed", colors['fg']), ('disabled', colors['fg-disabled'])]
-    )
-
-    style.configure('Confirm.TButton',
-        background = colors['bg-6'],
-        foreground = colors['fg'],
-    )
-    style.map('Confirm.TButton',
-        background=[("active", colors['green-2']), ("pressed", colors['green-4'])],
-        foreground=[("active", colors['fg']), ("pressed", colors['fg'])]
-    )
-
-    style.configure('Exit.TButton',
-        background = colors['bg-6'],
-        foreground = colors['fg'],
-    )
-    style.map('Exit.TButton',
-        background=[("active", colors['red-3']), ("pressed", colors['red-4'])],
-        foreground=[("active", colors['fg']), ("pressed", colors['fg'])]
-    )
-
-    style.configure('Working.TButton',
-        background = colors['blue-3'],
-        foreground = colors['fg'],
-    )
-    style.map('Working.TButton',
-        background=[("active", colors['blue-4']), ("pressed", colors['blue-4']), ('disabled', colors['blue-4'])],
-        foreground=[("active", colors['fg']), ("pressed", colors['fg']), ('disabled', colors['fg-disabled'])]
-    )
-
-    style.configure('Success.TButton',
-        background = colors['green-3'],
-        foreground = colors['fg'],
-    )
-    style.map('Success.TButton',
-        background=[("active", colors['green-4']), ("pressed", colors['green-4']), ('disabled', colors['green-2'])],
-        foreground=[("active", colors['fg']), ("pressed", colors['fg']), ('disabled', colors['fg-disabled'])]
-    )
-
-    style.configure('Failure.TButton',
-        background = colors['red-3'],
-        foreground = colors['fg'],
-    )
-    style.map('Failure.TButton',
-        background=[("active", colors['red-4']), ("pressed", colors['red-4']), ('disabled', colors['red-2'])],
-        foreground=[("active", colors['fg']), ("pressed", colors['fg']), ('disabled', colors['fg-disabled'])]
-    )
-
-    #Label
-    style.configure('TLabel',
-        background = colors['bg-3'],
-        foreground = colors['fg'],
-    )
-    style.configure('Warning.TLabel',
-        background = colors['bg-3'],
-        foreground = colors['red-4'],
-    )
-
-    #Radiobutton
-    style.configure('TRadiobutton',
-        background = colors['bg-3'],
-        foreground = colors['fg'],
-        indicatorcolor = colors['bg-3'],
-        focuscolor = ""
-    )
-    style.map('TRadiobutton',
-        background=[("active", colors['bg-3']), ("pressed", colors['bg-3'])],
-        foreground=[("active", colors['fg']), ("pressed", colors['fg'])]
-    )
-
-    #Frame
-    style.configure('TFrame',
-        background = colors['bg-3'],
-        foreground = colors['fg'],
-    )
-    style.configure('Titlebar.TFrame',
-        background = colors['bg-3'],
-        foreground = colors['fg'],
-    )
-
-    #Entry
-    style.configure("TEntry",
-        foreground = colors['fg'],
-        fieldbackground= colors['bg-6'],
-    )
-    style.map('TEntry',
-        fieldbackground=[("focus", colors['bg-6']), ("disabled", colors['bg-3'])],
-        foreground=[("focus", colors['fg'])]
-    )
-
-    #OptionMenu
-    style.configure('TMenubutton',
-        foreground = colors['fg'],
-        background= colors['bg-6'],
-    )
-    style.map('TMenubutton',
-        background=[("active", colors['bg-8']), ("disabled", colors['bg-3'])],
-        foreground=[("active", colors['fg'])]
-    )
-
-    #Progressbar
-    tmp_color = colors['green-2']
-    style.configure('TProgressbar',
-        throughcolor = tmp_color,
-        lightcolor = tmp_color,
-        darkcolor = tmp_color,
-        background= tmp_color,
-    )
-
 
 
 def main() -> None:
@@ -1142,7 +942,7 @@ def main() -> None:
 
     youtube.Youtube() #verifies credentials
     root = tk.Tk()
-    ttk_styles(root)
+    cf.ttk_styles(root)
     MainMenu(root)
 
     if args.automaticautoadder is True:
