@@ -16,4 +16,4 @@ limit playlist view
 dont let it grow, fixed
 foxus should always be on currentitem
 
-ABOUT page
+# ABOUT page

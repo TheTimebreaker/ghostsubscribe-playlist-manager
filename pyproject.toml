@@ -1,0 +1,73 @@
+[tool.ruff]
+line-length = 150
+target-version = "py313"
+
+exclude = [
+  ".venv",
+  "build",
+  "dist",
+  "__pycache__",
+  "__init__.py",
+]
+
+[tool.ruff.lint]
+select = [
+  "E",   # pycodestyle (errors)
+  "F",   # pyflakes
+  "I",   # isort (import sorting)
+  "B",   # flake8-bugbear (extra checks for likely bugs)
+  "UP",  # pyupgrade (modern Python syntax suggestions)
+  "N",   # pep8-naming
+  "ERA", # Mark commented out code
+  "ANN", # Some type annotations
+  "ASYNC", # Async checks
+  "FIX",
+  "ISC", # implicit str concat
+  "ICN", # import conventions
+  "G", #Logging format
+  "INP", #implicit-no-pep420
+  "PIE",
+  "Q", #flake8-quotes
+  "TD", #TODOs,
+  "ARG", #Unused args
+  "RUF", #Ruff specifics
+]
+extend-select = ["N815", "N816"]
+
+ignore = [
+  "ANN401", #allow type:Any
+]
+
+[tool.pylint."MASTER"]
+disable = ["all"]
+enable = [
+  "W1203", #fstring in logging
+  "C0103", #invalid name
+]
+ignore-paths = [".venv"]
+
+
+[tool.black]
+line-length = 150
+target-version = ["py313"]
+
+[tool.mypy]
+python_version = "3.13"
+disallow_untyped_calls = false
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+disallow_any_generics = false
+check_untyped_defs = true
+warn_unused_ignores = true
+warn_return_any = true
+# strict_optional = true # activate later
+
+
+[[tool.mypy.overrides]]
+module = [
+  "tkinter",
+  "vlc",
+  "yt_dlp",
+
+]
+ignore_missing_imports = true

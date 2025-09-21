@@ -1,22 +1,24 @@
 from __future__ import annotations
-import time
-import os
+
 import logging
-import tkinter as tk
-from tkinter import ttk
-from tkinter import filedialog, simpledialog, messagebox
-from typing import Optional, TypedDict, Any
-from urllib.parse import unquote, urlparse
-import threading
+import os
 import platform
-from pynput.keyboard import Listener
-from PIL import Image, ImageTk
+import threading
+import time
+import tkinter as tk
+from tkinter import filedialog, messagebox, simpledialog, ttk
+from typing import Any, TypedDict
+from urllib.parse import unquote, urlparse
+
 import requests
 import vlc
 import yt_dlp
+from PIL import Image, ImageTk
+from pynput.keyboard import Listener
+
 import centralfunctions as cf
-from colors import colors
 import youtube
+from colors import colors
 
 
 class YouTubeMetaData(TypedDict):
@@ -66,7 +68,7 @@ def get_yt_stream(youtube_url: str) -> tuple[str, str, YouTubeMetaData]:
         return best_video["url"], best_audio["url"], meta
 
 
-def get_current_vlc_list_index(media_list_player: vlc.MediaListPlayer, playlist: vlc.MediaList) -> Optional[int]:
+def get_current_vlc_list_index(media_list_player: vlc.MediaListPlayer, playlist: vlc.MediaList) -> int | None:
     current = media_list_player.get_media_player().get_media()
     if current is not None:
         for i in range(playlist.count()):
@@ -104,11 +106,11 @@ class PlaylistFrame(ttk.Frame):  # pylint:disable=too-many-ancestors
         self.media_list_player = media_list_player
         self.playlist = playlist
         self.labels: list[ttk.Label] = []
-        self.label_bg: Optional[str] = None
+        self.label_bg: str | None = None
         self.more_videos_pending = False
 
         self.max_rows = max_rows
-        self.row_height: Optional[int] = None
+        self.row_height: int | None = None
         self.canvas = tk.Canvas(self, height=0, bg=colors["bg-3"])
         self.scrollbar = ttk.Scrollbar(self, orient="vertical", command=self.canvas.yview)
         self.scrollable_frame = ttk.Frame(self.canvas)
@@ -119,15 +121,15 @@ class PlaylistFrame(ttk.Frame):  # pylint:disable=too-many-ancestors
         self.canvas.configure(yscrollcommand=self.scrollbar.set)
         self.canvas.bind("<Configure>", self.resize_frame)
         self.canvas.bind_all("<MouseWheel>", self._on_mousewheel)  # Windows/macOS
-        self.canvas.bind_all("<Button-4>", lambda e: self.canvas.yview_scroll(-1, "units"))  # Linux
-        self.canvas.bind_all("<Button-5>", lambda e: self.canvas.yview_scroll(1, "units"))  # Linux
+        self.canvas.bind_all("<Button-4>", lambda _: self.canvas.yview_scroll(-1, "units"))  # Linux
+        self.canvas.bind_all("<Button-5>", lambda _: self.canvas.yview_scroll(1, "units"))  # Linux
 
         # Layout
         self.grid_rowconfigure(0, weight=1)
         self.grid_columnconfigure(0, weight=1)
 
         # Update scrollregion when inner frame changes
-        self.scrollable_frame.bind("<Configure>", lambda e: self._update_scrollregion())
+        self.scrollable_frame.bind("<Configure>", lambda _: self._update_scrollregion())
 
         self.refresh_playlist()
 
@@ -153,7 +155,7 @@ class PlaylistFrame(ttk.Frame):  # pylint:disable=too-many-ancestors
             max_height = self.max_rows * self.row_height
             self.canvas.config(height=min(self.scrollable_frame.winfo_reqheight(), max_height))
 
-    def refresh_playlist(self, _: Optional[Any] = None, counter: int = 0) -> None:
+    def refresh_playlist(self, _: Any | None = None, counter: int = 0) -> None:
         """Read playlist items and display them as labels."""
         # clear existing labels
         for lbl in self.labels:
@@ -165,7 +167,7 @@ class PlaylistFrame(ttk.Frame):  # pylint:disable=too-many-ancestors
             if current_index and i < current_index - 1:
                 continue
 
-            media: vlc.Media = self.playlist.item_at_index(i)  # type:ignore
+            media: vlc.Media = self.playlist.item_at_index(i)
             if media:
                 title = media.get_meta(vlc.Meta.Title) or media.get_mrl()
                 artist = media.get_meta(vlc.Meta.Artist) or "Unknown Artist"
@@ -228,7 +230,7 @@ class VideoPlayer(cf.SubWindow):
         # Set video frame and controls frame
         self.video_frame = ttk.Frame(self.window)
         self.video_frame.grid(row=0, column=0, sticky="nsew")
-        self.placeholder_img: Optional[Image.Image] = None
+        self.placeholder_img: Image.Image | None = None
         self.placeholder_photo: ImageTk.PhotoImage
         self.set_placeholder_into_video_frame()
         self.video_frame.bind("<Configure>", self.resize_placeholder)
@@ -503,7 +505,7 @@ class VideoPlayer(cf.SubWindow):
         if yturl:
             try:
                 obj = youtube.Youtube().parse_any_url(yturl)
-            except youtube.SkippableException:
+            except youtube.SkippableError:
                 messagebox.showerror(
                     "Error - Could not parse URL",
                     message=f"The url you provided:\n{yturl}\ncould not be parsed.\n\n"
