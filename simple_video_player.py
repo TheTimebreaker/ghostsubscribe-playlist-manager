@@ -213,16 +213,6 @@ class VideoPlayer(cf.SubWindow):
         self.media_list_player.set_media_player(self._player)
         self.media_list_player.set_media_list(self.playlist)
 
-        self.volume_slider = tk.Scale(
-            self.window,
-            from_=0,
-            to=100,
-            orient="horizontal",
-            label="Volume",
-            command=self.set_volume,
-        )
-        self.volume_slider.set(self._player.audio_get_volume())  # start at current volume
-
         # Layout
         self.window.grid_rowconfigure(0, weight=1)  # Video row expands
         self.window.grid_columnconfigure(0, weight=1)
@@ -236,7 +226,6 @@ class VideoPlayer(cf.SubWindow):
         self.video_frame.bind("<Configure>", self.resize_placeholder)
         self.controls = ttk.Frame(self.window)
         self.controls.grid(row=1, column=0)
-        self.volume_slider.grid(row=2, column=0)
 
         # ATB (All The Buttons)
         self.btn_width = 10
@@ -295,6 +284,21 @@ class VideoPlayer(cf.SubWindow):
             command=self.send_to_downloader,
             width=self.btn_width,
         )
+        self.volume_slider = tk.Scale(
+            self.controls,
+            from_=0,
+            to=100,
+            orient="horizontal",
+            label="Volume",
+            command=self.set_volume,
+            background=colors["bg-3"],
+            highlightbackground=colors["bg-3"],
+            foreground=colors["fg"],
+            highlightcolor=colors["fg"],
+            troughcolor=colors["bg-6"],
+            border=0,
+        )
+        self.volume_slider.set(self._player.audio_get_volume())  # start at current volume
 
         previous_btn.pack(side="left", padx=5, pady=5)
         self.playpause_btn.pack(side="left", padx=5, pady=5)
@@ -303,6 +307,7 @@ class VideoPlayer(cf.SubWindow):
         add_btn.pack(side="left", padx=5, pady=5)
         addyt_btn.pack(side="left", padx=5, pady=5)
         self.download_btn.pack(side="left", padx=5, pady=5)
+        self.volume_slider.pack(side="left", padx=5, pady=5)
 
         self.playlist_frame = PlaylistFrame(self.window, self.media_list_player, self.playlist)
         self.playlist_frame.grid(row=3, column=0, sticky="ew")

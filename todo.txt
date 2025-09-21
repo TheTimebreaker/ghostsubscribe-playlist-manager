@@ -1,4 +1,5 @@
-add progress bar
+add progress bar to video
+add progress bar to remove to entry
 add audio only
 # add media button support
 add arrow keys (skip 5secs)
