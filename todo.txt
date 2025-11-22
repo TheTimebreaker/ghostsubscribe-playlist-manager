@@ -1,3 +1,6 @@
+new program: playlist cleanup (duplicates, etc)
+
+
 add progress bar to video
 add progress bar to remove to entry
 add audio only
