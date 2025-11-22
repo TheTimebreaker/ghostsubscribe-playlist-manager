@@ -12,11 +12,15 @@ That's right! You are no longer bound by the YouTube frontpage or the glitching 
 
 
 # What can it do
-This tool mainly consists of two subprograms (more to come <sup>tm</sup>):
+When starting this program, you can choose between the different tools provided (more to come <sup>tm</sup>):
 * Add to Playlist
     * Allows you to add anything (a video, a playlist or an entire channel) to one of your playlists.
 * Auto adder
     * The main management hub for your ghost subscriptions. Named like this because it automatically adds stuff compared to the manual "Add to Playlist" feature.
+* Remove Playlist entries up to index
+    * A terrible name for a tool that will remove all videos in a given playlist up until (and including) the index provided. Useful whenever you just binged one of your playlists to video 69 and don't want to remove the watched videos all by yourself.
+* Simple Video Player
+    * (Currently disfunctional due to recent YouTube changes that are causing issues that I wasn't able to fix) A very barebones video player that can play local files as well as YouTube videos. Due to its simplicity, this player is less laggy and faster compared to the official YouTube player (atleast for larger playlists, which seem to be causing the website a lot of trouble handling).
 
 # Get started (hopefully beginner friendly!)
 ## Requirements (before this guide)
