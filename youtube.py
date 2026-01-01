@@ -259,6 +259,7 @@ class Playlist(Youtube):
                 return
 
     def add_video(self, video_id: str) -> bool:
+
         try:
             request = self.build.playlistItems().insert(  # pylint:disable=no-member
                 part="snippet",
@@ -281,6 +282,16 @@ class Playlist(Youtube):
                 error,
             )
             return False
+        except UnskippableError as error:
+            if Video(video_id).verify() is False:
+                logging.error(
+                    "Video %s could not be added to target playlist %s because the video could not be verified via the API. "
+                    "This can happen when the video is private.",
+                    video_id,
+                    self.id,
+                )
+                return False
+            raise error
 
     def get_video_playlist_id(self, video_id: str) -> str | Literal[False]:
         for video_element in self.yield_elements(["id", "snippet"]):
