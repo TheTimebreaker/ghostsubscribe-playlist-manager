@@ -10,10 +10,11 @@ import time
 import tkinter as tk
 from collections.abc import Callable
 from functools import partial
-from tkinter import messagebox, ttk
+from tkinter import filedialog, messagebox, ttk
 from tkinter.scrolledtext import ScrolledText
 from typing import Any, cast
 
+import wget
 from dotenv import load_dotenv
 
 import auto_adder
@@ -667,6 +668,96 @@ class AddToPlaylistWindow(cf.SubWindow):  # pylint:disable=too-many-instance-att
             )
 
 
+class DownloadChannelIconWindow(cf.SubWindow):
+    def __init__(self, root: tk.Tk) -> None:
+        self.root = root
+        self.window = tk.Toplevel(self.root)
+        cf.tk_root_styles(self.window)
+        self.window.protocol("WM_DELETE_WINDOW", self.on_close)
+        self.window.title("Download Channel Icon")
+
+        self.entry_width = 60
+        self.label_width = 15
+
+        ttk.Label(
+            self.window,
+            text="Channel ID / URL",
+        ).grid(row=0, column=0, sticky="w", padx=self.padx, pady=self.pady)
+        self.channel_var = tk.StringVar(self.window)
+        self.channel_var.trace_add("write", self.on_text_change)
+        self.channel_entry = ttk.Entry(
+            self.window,
+            textvariable=self.channel_var,
+            width=self.entry_width,
+        )
+        self.channel_entry.grid(row=0, column=1, columnspan=2, sticky="ew", padx=self.padx, pady=self.pady)
+
+        ttk.Label(
+            self.window,
+            text="Download image dimensions (pixels)",
+        ).grid(row=1, column=0, sticky="w", padx=self.padx, pady=self.pady)
+        self.dimensions_var = tk.IntVar(self.window, value=900)
+        self.dimensions_entry = ttk.Spinbox(
+            self.window,
+            textvariable=self.dimensions_var,
+            from_=0,
+            to=5000,
+            width=self.entry_width,
+        )
+        self.dimensions_entry.grid(row=1, column=1, columnspan=2, sticky="ew", padx=self.padx, pady=self.pady)
+
+        ttk.Label(
+            self.window,
+            text="Download Location",
+        ).grid(row=2, column=0, sticky="w", padx=self.padx, pady=self.pady)
+        self.dl_null = "Click the button on the right to set location..."
+        self.downloadlocation_var = tk.StringVar(self.window, value=self.dl_null)
+        self.downloadlocation_var.trace_add("write", self.on_text_change)
+        self.downloadlocation_entry = ttk.Label(
+            self.window,
+            textvariable=self.downloadlocation_var,
+            width=self.entry_width,
+        )
+        self.downloadlocation_entry.grid(row=2, column=1, sticky="ew", padx=self.padx, pady=self.pady)
+        ttk.Button(
+            self.window,
+            text="Select Location",
+            command=self.set_download_location,
+        ).grid(row=2, column=2, sticky="ew", padx=self.padx, pady=self.pady)
+
+        ttk.Separator(self.window, orient="horizontal").grid(row=3, column=0, columnspan=3, sticky="ew", padx=self.padx, pady=self.pady)
+
+        self.download_button = ttk.Button(
+            self.window,
+            text="Download Image",
+            state="disabled",
+            command=self.download,
+        )
+        self.download_button.grid(row=4, column=0, columnspan=3, sticky="ew", padx=self.padx, pady=self.pady)
+
+    def on_text_change(self, *_: Any) -> None:
+        if self.channel_var.get() and self.downloadlocation_var.get() and self.downloadlocation_var.get() != self.dl_null:
+            self.download_button.configure(state="normal")
+            return
+        self.download_button.configure(state="disabled")
+
+    def set_download_location(self) -> None:
+        path = filedialog.askdirectory()
+        if path:
+            self.downloadlocation_var.set(path)
+
+    def download(self) -> None:
+        channel_id = self.channel_var.get()
+        if not channel_id:
+            return
+        c = youtube.Channel(channel_id)
+        if not c.verify():
+            messagebox.showerror("Error: Invalid Channel ID / URL", "The Channel ID / URL you entered could not be verified and is invalid.")
+            return
+        wget.download(c.get_profile_image(self.dimensions_var.get()), os.path.join(self.downloadlocation_var.get(), c.id + ".jpg"))
+        self.download_button.configure(style="Success.TButton")
+
+
 class RemovePlaylistEntriesUpToIndex(cf.SubWindow):  # pylint:disable=too-many-instance-attributes
     def __init__(self, root: tk.Tk) -> None:
         self.root = root
@@ -770,6 +861,7 @@ class MainMenu:
 
         ttk.Button(root, text="Add to Playlist", command=self.add_to_playlist_window, width=self.btn_width).pack(padx=5, pady=5)
         ttk.Button(root, text="Auto Playlist Adder", command=self.auto_add_window, width=self.btn_width).pack(padx=5, pady=5)
+        ttk.Button(root, text="Download Channel Icon", command=self.download_channel_icon, width=self.btn_width).pack(padx=5, pady=5)
         ttk.Button(root, text="Remove Playlist entries up to index", command=self.remove_playlist_entries, width=self.btn_width).pack(padx=5, pady=5)
         ttk.Button(root, text="Simple Video Player", command=self.simple_video_player, width=self.btn_width).pack(padx=5, pady=5)
 
@@ -791,6 +883,10 @@ http.cat/status/204 - Placeholder image for Simple Video Player"""
     def auto_add_window(self) -> None:
         self.root.withdraw()
         AutoAddWindow(self.root)
+
+    def download_channel_icon(self) -> None:
+        self.root.withdraw()
+        DownloadChannelIconWindow(self.root)
 
     def remove_playlist_entries(self) -> None:
         self.root.withdraw()

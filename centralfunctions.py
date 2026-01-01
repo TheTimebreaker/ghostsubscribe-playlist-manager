@@ -139,6 +139,18 @@ def ttk_styles(root: tk.Tk) -> None:
         background=tmp_color,
     )
 
+    # Spinbox
+    style.configure(
+        "TSpinbox",
+        foreground=colors["fg"],
+        fieldbackground=colors["bg-6"],
+    )
+    style.map(
+        "TSpinbox",
+        fieldbackground=[("focus", colors["bg-6"]), ("disabled", colors["bg-3"])],
+        foreground=[("focus", colors["fg"])],
+    )
+
 
 def tk_styles(element: tk.Menu) -> dict[str, str]:
     if isinstance(element, tk.Menu):
