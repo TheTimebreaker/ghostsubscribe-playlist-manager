@@ -21,7 +21,8 @@ import auto_adder
 import centralfunctions as cf
 import youtube
 from colors import colors
-from simple_video_player import VideoPlayer
+
+# from simple_video_player import VideoPlayer  # noqa: ERA001
 
 
 class ConfigureSpecificAutoAdd(cf.SubWindow):
@@ -863,7 +864,7 @@ class MainMenu:
         ttk.Button(root, text="Auto Playlist Adder", command=self.auto_add_window, width=self.btn_width).pack(padx=5, pady=5)
         ttk.Button(root, text="Download Channel Icon", command=self.download_channel_icon, width=self.btn_width).pack(padx=5, pady=5)
         ttk.Button(root, text="Remove Playlist entries up to index", command=self.remove_playlist_entries, width=self.btn_width).pack(padx=5, pady=5)
-        ttk.Button(root, text="Simple Video Player", command=self.simple_video_player, width=self.btn_width).pack(padx=5, pady=5)
+        # ttk.Button(root, text="Simple Video Player", command=self.simple_video_player, width=self.btn_width).pack(padx=5, pady=5)  # noqa: ERA001
 
     def about(self) -> None:
         msg = """Development:
@@ -892,9 +893,9 @@ http.cat/status/204 - Placeholder image for Simple Video Player"""
         self.root.withdraw()
         RemovePlaylistEntriesUpToIndex(self.root)
 
-    def simple_video_player(self) -> None:
-        self.root.withdraw()
-        VideoPlayer(self.root)
+    # def simple_video_player(self) -> None:
+    #     self.root.withdraw()  # noqa: ERA001
+    #     VideoPlayer(self.root)  # noqa: ERA001
 
     def on_close(self) -> None:
         self.root.destroy()
