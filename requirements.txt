@@ -49,6 +49,7 @@ pylint==3.3.7
 pyparsing==3.2.3
 python-dateutil==2.9.0.post0
 python-dotenv==1.1.1
+python-vlc==3.0.21203
 pytz==2025.2
 referencing==0.36.2
 requests==2.32.4
@@ -69,3 +70,5 @@ tzdata==2025.2
 uritemplate==4.2.0
 urllib3==2.5.0
 watchdog==6.0.0
+wget==3.2
+yt-dlp==2025.12.8
