@@ -3,7 +3,7 @@ Set objShell = CreateObject("WScript.Shell")
 
 ' Run the command to activate the virtual environment and execute the Python script
 Dim strArgs
-strArgs = "cmd /c .\.venv\Scripts\activate && py .\main.py && .\.venv\Scripts\deactivate"
+strArgs = "cmd /c .\.venv-windows\Scripts\activate && py .\main.py && .\.venv-windows\Scripts\deactivate"
 objShell.Run strArgs, 0, False
 
 ' Cleanup
