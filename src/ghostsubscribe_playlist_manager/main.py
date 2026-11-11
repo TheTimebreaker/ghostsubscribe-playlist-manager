@@ -20,6 +20,7 @@ from dotenv import load_dotenv
 from . import auto_adder, youtube
 from . import centralfunctions as cf
 from .colors import colors
+from .config import config
 
 
 class ConfigureSpecificAutoAdd(cf.SubWindow):
@@ -152,7 +153,7 @@ class ConfigureSpecificAutoAdd(cf.SubWindow):
         if new_log_or_add == "Add new videos":
             videolist = list(
                 c.list_uploads(
-                    size=int(os.getenv("keep_video_ids", "45")),
+                    size=config.kept_video_ids,
                     full_videos_only=selector == "full_videos_only",
                     livestreams_only=selector == "livestreams_only",
                     shorts_only=selector == "shorts_only",

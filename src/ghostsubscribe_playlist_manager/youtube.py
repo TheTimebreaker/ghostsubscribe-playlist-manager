@@ -15,6 +15,8 @@ from google_auth_oauthlib.flow import InstalledAppFlow  # type: ignore
 from googleapiclient.discovery import build  # type: ignore
 from googleapiclient.errors import HttpError  # type: ignore
 
+from .config import CREDENTIALS_PATH, TOKEN_PATH
+
 
 class UnskippableError(Exception):
     pass
@@ -139,10 +141,8 @@ class Youtube:
             return creds
 
         creds = None
-        client_secret_path = os.getenv("GOOGLE_CLIENT_SECRET", "credentials.json")
-        assert client_secret_path
-        client_token_path = os.getenv("GOOGLE_CLIENT_TOKEN", "token.json")
-        assert client_token_path
+        client_secret_path = CREDENTIALS_PATH
+        client_token_path = TOKEN_PATH
 
         if os.path.exists(client_token_path):
             creds = read_creds()
