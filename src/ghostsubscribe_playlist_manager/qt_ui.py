@@ -645,11 +645,14 @@ class CreateAutoAdderDialog(QDialog):
 class ConfigureAutoAdderDialog(QDialog):
     def __init__(self, filepath: Path, parent: QWidget) -> None:
         super().__init__(parent)
+        self.setMinimumWidth(600)
         self.filepath = filepath
         self.old_config = auto_adder.read_settings(str(filepath))
         self.new_config = self.old_config.model_copy(deep=True)
         self.setWindowTitle(f"Configure: {self.old_config.global_settings.name}")
+
         layout = QVBoxLayout(self)
+        layout.addWidget(QLabel("<b><u>General config</u></b>", self))
         form = QFormLayout()
         self.name = QLineEdit(self.old_config.global_settings.name, self)
         form.addRow("Display name:", self.name)
@@ -662,7 +665,12 @@ class ConfigureAutoAdderDialog(QDialog):
         form.addRow("Video filter:", self.selector)
         layout.addLayout(form)
 
-        layout.addWidget(QLabel("Add a channel to this auto adder", self))
+        divider = QFrame(self)
+        divider.setFrameShape(QFrame.Shape.HLine)
+        divider.setFrameShadow(QFrame.Shadow.Sunken)
+        layout.addWidget(divider)
+
+        layout.addWidget(QLabel("<b><u>Add channel</u></b>", self))
         channel_form = QFormLayout()
         self.channel_id = QLineEdit(self)
         channel_form.addRow("Channel ID / URL:", self.channel_id)
@@ -674,13 +682,10 @@ class ConfigureAutoAdderDialog(QDialog):
         channel_form.addRow("Video filter:", self.channel_filter)
         layout.addLayout(channel_form)
 
-        mode_layout = QHBoxLayout()
-        self.add_new_videos = QRadioButton("Add new videos", self)
-        self.add_all_videos = QRadioButton("Add all videos", self)
-        self.add_new_videos.setChecked(True)
-        mode_layout.addWidget(self.add_new_videos)
-        mode_layout.addWidget(self.add_all_videos)
-        layout.addLayout(mode_layout)
+        self.video_mode = QComboBox(self)
+        self.video_mode.addItem("Add new videos", "new")
+        self.video_mode.addItem("Add all videos", "all")
+        channel_form.addRow("Videos to add:", self.video_mode)
 
         add_channel = QPushButton("Add channel", self)
         add_channel.clicked.connect(self.add_channel_to_config)
@@ -721,7 +726,7 @@ class ConfigureAutoAdderDialog(QDialog):
                         shorts_only=selector == "shorts_only",
                     )
                 )
-                if self.add_new_videos.isChecked()
+                if self.video_mode.currentData() == "new"
                 else []
             )
             self.new_config.channels[channel.id] = auto_adder.SettingsChannels(
