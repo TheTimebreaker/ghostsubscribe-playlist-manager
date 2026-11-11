@@ -7,7 +7,6 @@ import re
 from collections.abc import Generator
 from typing import Any, Literal
 
-from dotenv import load_dotenv
 from google.auth.exceptions import RefreshError
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
@@ -115,7 +114,6 @@ class Youtube:
     CHANNEL_HANDLE_PATTERN = r"https?://(?:www\.)?youtube\.com/(@[\w\-]+)/?"
 
     def __init__(self) -> None:
-        load_dotenv()
         self.scope = ["https://www.googleapis.com/auth/youtube.force-ssl"]
         self.creds = self._authorize(self.scope)
         self.build = build_with_wrapped_execute("youtube", "v3", credentials=self.creds)

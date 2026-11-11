@@ -1,4 +1,4 @@
-from typing import Literal
+from enum import StrEnum
 
 import platformdirs
 from pydantic import BaseModel, Field
@@ -14,11 +14,19 @@ CREDENTIALS_PATH.parent.mkdir(parents=True, exist_ok=True)
 TOKEN_PATH.parent.mkdir(parents=True, exist_ok=True)
 
 
+class Theme(StrEnum):
+    """This enum lets you define a theme for the application."""
+
+    SYSTEM = "Automatic"
+    LIGHT = "Light Mode"
+    DARK = "Dark Mode"
+
+
 class Config(BaseModel):
-    theme: Literal["dark", "light", "auto"] = Field(
-        "dark",
+    theme: Theme = Field(
+        Theme.SYSTEM,
         title="Theme",
-        description="Sets the theme of the GUI to light, dark or auto (based on your OS' settings)",
+        description="Sets the theme of the GUI.",
     )
 
     kept_video_ids: int = Field(

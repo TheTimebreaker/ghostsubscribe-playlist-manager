@@ -3,11 +3,23 @@ from __future__ import annotations
 import argparse
 import logging
 
-from dotenv import load_dotenv
+from PySide6.QtGui import Qt
 from PySide6.QtWidgets import QApplication
 
 from . import youtube
+from .config import Config, Theme, config
 from .qt_ui import AutoAdderDialog, MainWindow
+
+
+def configure_app_style(app: QApplication, settings: Config) -> None:
+    theme = settings.theme
+    hints = app.styleHints()
+    if theme == Theme.LIGHT:
+        hints.setColorScheme(Qt.ColorScheme.Light)
+    elif theme == Theme.DARK:
+        hints.setColorScheme(Qt.ColorScheme.Dark)
+    elif theme == Theme.SYSTEM:
+        hints.unsetColorScheme()
 
 
 def main() -> None:
@@ -21,8 +33,12 @@ def main() -> None:
     args = parser.parse_args()
 
     app = QApplication.instance() or QApplication([])
+    if not isinstance(app, QApplication):
+        raise Exception
+
     app.setApplicationName("GhostSubscribe Playlist Manager")
-    load_dotenv()
+    configure_app_style(app, config)
+
     try:
         youtube.Youtube()
     except Exception:
