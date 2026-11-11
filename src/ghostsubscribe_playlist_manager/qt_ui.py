@@ -10,25 +10,26 @@ from pathlib import Path
 from typing import Any, override
 
 import wget
-from PySide6.QtCore import QObject, Qt, QThread, QTimer, Signal
+from PySide6.QtCore import QObject, QThread, QTimer, Signal
 from PySide6.QtGui import QAction
 from PySide6.QtWidgets import (
     QButtonGroup,
+    QCheckBox,
     QComboBox,
     QDialog,
     QFileDialog,
     QFormLayout,
+    QFrame,
     QHBoxLayout,
-    QInputDialog,
     QLabel,
     QLineEdit,
     QMainWindow,
-    QMenuBar,
     QMessageBox,
     QPlainTextEdit,
     QProgressBar,
     QPushButton,
     QRadioButton,
+    QScrollArea,
     QSpinBox,
     QVBoxLayout,
     QWidget,
@@ -101,30 +102,29 @@ class LoggedDialog(QDialog):
 
 
 class MainWindow(QMainWindow):
-    def __init__(self) -> None:
+    def __init__(self, run_directly: bool = False) -> None:
         super().__init__()
         self.setWindowTitle("YouTube manager")
-        self.setMinimumWidth(420)
+        self.setMinimumSize(640, 420)
+
+        utils_menu = self.menuBar().addMenu("Utils")
+        utilities: tuple[tuple[str, Callable[[], None]], ...] = (
+            ("Add to Playlist", self.add_to_playlist),
+            ("Download Channel Icon", self.download_channel_icon),
+            ("Remove Playlist entries up to index", self.remove_playlist_entries),
+        )
+        for label, callback in utilities:
+            action = QAction(label, self)
+            action.triggered.connect(callback)
+            utils_menu.addAction(action)
 
         about_menu = self.menuBar().addMenu("About")
         about_action = QAction("Show about", self)
         about_action.triggered.connect(self.about)
         about_menu.addAction(about_action)
 
-        content = QWidget(self)
-        layout = QVBoxLayout(content)
-        actions: tuple[tuple[str, Callable[[], None]], ...] = (
-            ("Add to Playlist", self.add_to_playlist),
-            ("Auto Playlist Adder", self.open_auto_adder),
-            ("Download Channel Icon", self.download_channel_icon),
-            ("Remove Playlist entries up to index", self.remove_playlist_entries),
-        )
-        for label, callback in actions:
-            button = QPushButton(label, content)
-            button.clicked.connect(callback)
-            layout.addWidget(button)
-        layout.addStretch()
-        self.setCentralWidget(content)
+        self.auto_adders = AutoAdderPanel(self, run_directly=run_directly)
+        self.setCentralWidget(self.auto_adders)
 
     def about(self) -> None:
         QMessageBox.about(self, "About", "Development:\nTheTimebreaker\n\nContributors:\nTheTimebreaker")
@@ -132,14 +132,24 @@ class MainWindow(QMainWindow):
     def add_to_playlist(self) -> None:
         AddToPlaylistDialog(self).exec()
 
-    def open_auto_adder(self) -> None:
-        AutoAdderDialog(self).exec()
-
     def download_channel_icon(self) -> None:
         DownloadChannelIconDialog(self).exec()
 
     def remove_playlist_entries(self) -> None:
         RemovePlaylistEntriesDialog(self).exec()
+
+    @override
+    def closeEvent(self, event: Any) -> None:
+        worker = self.auto_adders.worker
+        if worker and worker.isRunning():
+            self.auto_adders.close_when_done = True
+            self.auto_adders.stop_event.set()
+            self.auto_adders.run_all_button.setText("Cancelling...")
+            self.auto_adders.run_all_button.setEnabled(False)
+            event.ignore()
+            return
+        self.auto_adders.shutdown()
+        super().closeEvent(event)
 
 
 class AddToPlaylistDialog(LoggedDialog):
@@ -373,45 +383,84 @@ class AutoAdderWorker(QThread):
             self.completed.emit(not self.stop_event.is_set(), "")
 
 
-class AutoAdderDialog(LoggedDialog):
+class AutoAdderPanel(QWidget):
+    run_finished = Signal(bool)
+
     def __init__(self, parent: QWidget, run_directly: bool = False) -> None:
         super().__init__(parent)
-        self.setWindowTitle("Auto Adder")
         self.stop_event = threading.Event()
         self.worker: AutoAdderWorker | None = None
         self.run_directly = run_directly
         self._close_when_done = False
+        self.close_when_done = False
+        self._last_run_success = False
 
         layout = QVBoxLayout(self)
-        menu_bar = QMenuBar(self)
-        config_menu = menu_bar.addMenu("Config")
-        create_action = QAction("Create new Auto Adder", self)
-        create_action.triggered.connect(self.create_auto_adder)
-        config_action = QAction("Configure Existing Auto Adder", self)
-        config_action.triggered.connect(self.configure_auto_adder)
-        config_menu.addAction(create_action)
-        config_menu.addAction(config_action)
-        self.config_menu = config_menu
-        layout.setMenuBar(menu_bar)
+        layout.setContentsMargins(12, 12, 12, 12)
+        self.adders_scroll = QScrollArea(self)
+        self.adders_scroll.setWidgetResizable(True)
+        self.adders_scroll.setFrameShape(QFrame.Shape.NoFrame)
+        self.adders_content = QWidget(self.adders_scroll)
+        self.adders_layout = QVBoxLayout(self.adders_content)
+        self.adders_layout.setContentsMargins(4, 4, 4, 4)
+        self.adders_layout.setSpacing(6)
+        self.adders_layout.addStretch()
+        self.adders_scroll.setWidget(self.adders_content)
+        layout.addWidget(self.adders_scroll, 1)
 
-        heading = QLabel("Please choose an auto adder to run.", self)
-        heading.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(heading)
-        self.adders_layout = layout
+        divider = QFrame(self)
+        divider.setFrameShape(QFrame.Shape.HLine)
+        divider.setFrameShadow(QFrame.Shadow.Sunken)
+        layout.addWidget(divider)
+        self.progress_area = QWidget(self)
+        progress_layout = QVBoxLayout(self.progress_area)
+        progress_layout.setContentsMargins(4, 2, 4, 2)
+        progress_layout.setSpacing(4)
+        self.progress_status = QWidget(self.progress_area)
+        status_layout = QVBoxLayout(self.progress_status)
+        status_layout.setContentsMargins(0, 0, 0, 0)
+        status_layout.setSpacing(4)
+        self.progress_label = QLabel("", self.progress_area)
+        self.progress_label.setWordWrap(True)
+        self.progress = QProgressBar(self.progress_area)
+        self.progress.setTextVisible(False)
+        status_layout.addWidget(self.progress_label)
+        status_layout.addWidget(self.progress)
+        progress_layout.addWidget(self.progress_status)
+        self.progress_status.hide()
+        self.exit_after_run_checkbox = QCheckBox("Exit after successful run", self.progress_area)
+        self.exit_after_run_checkbox.setChecked(run_directly)
+        progress_layout.addWidget(self.exit_after_run_checkbox)
+        layout.addWidget(self.progress_area)
+        divider = QFrame(self)
+        divider.setFrameShape(QFrame.Shape.HLine)
+        divider.setFrameShadow(QFrame.Shadow.Sunken)
+        layout.addWidget(divider)
+
         self.adder_buttons: list[QPushButton] = []
+        self.config_buttons: list[QPushButton] = []
+        self.adder_rows: list[QWidget] = []
         self.adder_paths: list[Path] = []
 
-        self.progress_label = QLabel("", self)
-        layout.addWidget(self.progress_label)
-        self.progress = QProgressBar(self)
-        self.progress.hide()
-        layout.addWidget(self.progress)
+        controls = QHBoxLayout()
+        add_button = QPushButton("Add new", self)
+        add_button.clicked.connect(self.create_auto_adder)
+        controls.addWidget(add_button)
+        controls.addStretch()
         self.run_all_button = QPushButton("Run All", self)
         self.run_all_button.clicked.connect(self._run_all_or_cancel)
-        layout.addWidget(self.run_all_button)
-        close_button = QPushButton("Close", self)
-        close_button.clicked.connect(self.reject)
-        layout.addWidget(close_button)
+        controls.addWidget(self.run_all_button)
+        layout.addLayout(controls)
+
+        self.log_display = QPlainTextEdit(self)
+        self.log_display.setReadOnly(True)
+        self.log_display.setMaximumBlockCount(1000)
+        self.log_display.hide()
+        self.log_bridge = LogBridge(self)
+        self.log_bridge.message.connect(self._show_log)
+        self.log_handler = WindowLogHandler(self.log_bridge)
+        logging.getLogger().addHandler(self.log_handler)
+
         self._reload()
 
         if run_directly:
@@ -423,39 +472,54 @@ class AutoAdderDialog(LoggedDialog):
         if dialog.exec() == QDialog.DialogCode.Accepted:
             self._reload()
 
-    def configure_auto_adder(self) -> None:
-        if not self.adder_paths:
-            show_error(self, "No auto adders", "There are no auto adders to configure.")
-            return
-        names = [auto_adder.read_settings(str(path)).global_settings.name for path in self.adder_paths]
-        selected, accepted = QInputDialog.getItem(self, "Configure Auto Adder", "Choose an auto adder:", names, 0, False)
-        if accepted:
-            path = self.adder_paths[names.index(selected)]
-            if ConfigureAutoAdderDialog(path, self).exec() == QDialog.DialogCode.Accepted:
-                self._reload()
+    def configure_auto_adder(self, path: Path) -> None:
+        if ConfigureAutoAdderDialog(path, self).exec() == QDialog.DialogCode.Accepted:
+            self._reload()
+
+    def _show_log(self, message: str) -> None:
+        if not self.log_display.isVisible():
+            layout = self.layout()
+            if layout is None:
+                raise RuntimeError("The auto-adder layout has not been initialized.")
+            layout.addWidget(self.log_display)
+            self.log_display.show()
+        self.log_display.appendPlainText(message)
 
     def _reload(self) -> None:
-        for button in self.adder_buttons:
-            self.adders_layout.removeWidget(button)
-            button.deleteLater()
+        for row in self.adder_rows:
+            self.adders_layout.removeWidget(row)
+            row.deleteLater()
         self.adder_buttons.clear()
+        self.config_buttons.clear()
+        self.adder_rows.clear()
         self.adder_paths.clear()
         try:
             paths = sorted(path for path in AUTO_ADDER_PATH.iterdir() if path.is_file() and path.name != "template.json")
             for path in paths:
                 settings = auto_adder.read_settings(str(path))
-                button = QPushButton(settings.global_settings.name, self)
+                row = QWidget(self.adders_content)
+                row_layout = QHBoxLayout(row)
+                row_layout.setContentsMargins(8, 4, 8, 4)
+                name = QLabel(settings.global_settings.name, row)
+                row_layout.addWidget(name, 1)
+                config_button = QPushButton("Config", row)
+                config_button.clicked.connect(lambda _checked=False, item=path: self.configure_auto_adder(item))
+                row_layout.addWidget(config_button)
+                button = QPushButton("Run", row)
                 button.clicked.connect(lambda _checked=False, item=path: self.run_paths([item]))
+                row_layout.addWidget(button)
                 self.adder_buttons.append(button)
+                self.config_buttons.append(config_button)
+                self.adder_rows.append(row)
                 self.adder_paths.append(path)
-                self.adders_layout.insertWidget(self.adders_layout.indexOf(self.progress_label), button)
+                self.adders_layout.insertWidget(self.adders_layout.count() - 1, row)
         except Exception:
             handle_error(self, "Could not load auto-adder configurations")
 
     def _start_direct_run(self) -> None:
         if not self.adder_paths:
             QMessageBox.information(self, "No auto adders", "There are no auto adders to run.")
-            self.accept()
+            self.run_finished.emit(False)
             return
         self.run_paths(self.adder_paths, close_when_done=True)
 
@@ -476,31 +540,42 @@ class AutoAdderDialog(LoggedDialog):
         self.worker = AutoAdderWorker(paths, self.stop_event)
         self.worker.progress.connect(self._update_progress)
         self.worker.completed.connect(self._complete)
+        self.worker.finished.connect(self._worker_finished)
         self.worker.start()
 
     def _set_running(self, running: bool) -> None:
         for button in self.adder_buttons:
             button.setEnabled(not running)
-        self.config_menu.setEnabled(not running)
+        for button in self.config_buttons:
+            button.setEnabled(not running)
         self.run_all_button.setEnabled(True)
         self.run_all_button.setText("Cancel" if running else "Run All")
-        self.progress.setVisible(running)
+        self.progress_status.setVisible(running)
 
     def _update_progress(self, message: str, current: int, total: int) -> None:
         self.progress.setMaximum(max(total, 1))
         self.progress.setValue(min(current + 1, max(total, 1)))
-        self.progress_label.setText(f"{current + 1} / {total} - {message.replace(chr(10), ' ')}")
+        msg = f"{current + 1} / {total} - {message.replace(chr(10), ' ')}"
+        self.progress_label.setText(msg)
+        print(msg)
 
     def _complete(self, success: bool, error: str) -> None:
         self._set_running(False)
-        if self._close_when_done and success:
-            self.accept()
-            return
-        if success:
-            QMessageBox.information(self, "Success", "Auto adder finished successfully.")
-        elif error and error != "Auto adder was cancelled.":
+        self._last_run_success = success
+        if error and error != "Auto adder was cancelled." and not self.close_when_done:
             show_error(self, "Auto adder failed", error)
         self.progress_label.setText(error or "Finished.")
+
+    def _worker_finished(self) -> None:
+        if self._close_when_done:
+            self.run_finished.emit(self._last_run_success)
+        elif self._last_run_success and self.exit_after_run_checkbox.isChecked():
+            self.window().close()
+        elif self._last_run_success and not self.close_when_done:
+            QMessageBox.information(self, "Success", "Auto adder finished successfully.")
+        if self.close_when_done:
+            self.close_when_done = False
+            self.window().close()
 
     @override
     def closeEvent(self, event: Any) -> None:
@@ -511,7 +586,13 @@ class AutoAdderDialog(LoggedDialog):
             self.run_all_button.setEnabled(False)
             event.ignore()
             return
-        super().closeEvent(event)
+        logging.getLogger().removeHandler(self.log_handler)
+        event.accept()
+
+    def shutdown(self) -> None:
+        logging.getLogger().removeHandler(self.log_handler)
+
+
 class CreateAutoAdderDialog(QDialog):
     def __init__(self, parent: QWidget) -> None:
         super().__init__(parent)

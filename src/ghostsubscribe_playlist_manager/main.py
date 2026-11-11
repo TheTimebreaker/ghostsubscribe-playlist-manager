@@ -8,7 +8,7 @@ from PySide6.QtWidgets import QApplication
 
 from . import youtube
 from .config import Config, Theme, config
-from .qt_ui import AutoAdderDialog, MainWindow
+from .qt_ui import MainWindow
 
 
 def configure_app_style(app: QApplication, settings: Config) -> None:
@@ -45,13 +45,12 @@ def main() -> None:
         logging.exception("Could not authorize with YouTube.")
         raise
 
-    window = MainWindow()
-    window.show()
+    window = MainWindow(run_directly=args.automaticautoadder)
     if args.automaticautoadder:
         window.hide()
-        dialog = AutoAdderDialog(window, run_directly=True)
-        dialog.finished.connect(lambda _: app.quit())
-        dialog.open()
+        window.auto_adders.run_finished.connect(lambda _: app.quit())
+    else:
+        window.show()
 
     app.exec()
 
