@@ -17,11 +17,9 @@ from typing import Any, cast
 import wget
 from dotenv import load_dotenv
 
-import src.ghostsubscribe.auto_adder as auto_adder
-import src.ghostsubscribe.centralfunctions as cf
-import src.ghostsubscribe.youtube as youtube
-from src.ghostsubscribe.colors import colors
-from src.ghostsubscribe.simple_video_player import VideoPlayer
+from . import auto_adder, youtube
+from . import centralfunctions as cf
+from .colors import colors
 
 
 class ConfigureSpecificAutoAdd(cf.SubWindow):
@@ -863,17 +861,13 @@ class MainMenu:
         ttk.Button(root, text="Auto Playlist Adder", command=self.auto_add_window, width=self.btn_width).pack(padx=5, pady=5)
         ttk.Button(root, text="Download Channel Icon", command=self.download_channel_icon, width=self.btn_width).pack(padx=5, pady=5)
         ttk.Button(root, text="Remove Playlist entries up to index", command=self.remove_playlist_entries, width=self.btn_width).pack(padx=5, pady=5)
-        ttk.Button(root, text="Simple Video Player", command=self.simple_video_player, width=self.btn_width).pack(padx=5, pady=5)
 
     def about(self) -> None:
         msg = """Development:
 TheTimebreaker
 
 Contributors:
-TheTimebreaker
-
-Additional resources:
-http.cat/status/204 - Placeholder image for Simple Video Player"""
+TheTimebreaker"""
         messagebox.showinfo(title="About", message=msg)
 
     def add_to_playlist_window(self) -> None:
@@ -891,10 +885,6 @@ http.cat/status/204 - Placeholder image for Simple Video Player"""
     def remove_playlist_entries(self) -> None:
         self.root.withdraw()
         RemovePlaylistEntriesUpToIndex(self.root)
-
-    def simple_video_player(self) -> None:
-        self.root.withdraw()
-        VideoPlayer(self.root)
 
     def on_close(self) -> None:
         self.root.destroy()

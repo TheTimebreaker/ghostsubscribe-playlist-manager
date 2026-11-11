@@ -4,7 +4,7 @@ from tkinter import font, ttk
 from tkinter.scrolledtext import ScrolledText
 from typing import Any, get_args
 
-from src.ghostsubscribe.colors import colors
+from .colors import colors
 
 
 def ttk_styles(root: tk.Tk) -> None:

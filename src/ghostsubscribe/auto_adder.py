@@ -8,7 +8,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel
 
-import src.ghostsubscribe.youtube as youtube
+from . import youtube
 
 ChannelUploadFilter = Literal["all_videos", "full_videos_only", "livestreams_only", "shorts_only"]
 PlaylistEntryFilter = Literal["all_videos", "new_entries_from_the_top"]

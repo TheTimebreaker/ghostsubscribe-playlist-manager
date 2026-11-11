@@ -6,6 +6,7 @@
 /output
 /build
 /dist
+*/*.egg-info
 /auto_adder_config/*
 !auto_adder_config/template.json
 

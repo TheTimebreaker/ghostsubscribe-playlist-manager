@@ -21,3 +21,8 @@ dont let it grow, fixed
 foxus should always be on currentitem
 
 # ABOUT page
+
+
+
+remove dotenv
+lazy all
