@@ -22,10 +22,12 @@ class SettingsGlobal(BaseModel):
     name: str
     target_playlist_id: str
     selector: ChannelUploadFilter
+    disabled: bool = False
 
 
 class PerChannelSettings(BaseModel):
     selector: ChannelUploadFilter
+    disabled: bool = False
 
 
 class PerPlaylistSettings(BaseModel):
@@ -81,55 +83,6 @@ def write_settings(file: str, settings: Settings) -> None:
         raise e
 
 
-def process_old(file: str, stop_event: Event) -> Generator[tuple[str, int, int]]:
-    data = read_settings(file)
-    global_settings = data.global_settings
-    process_name = global_settings.name
-    target_playlist = youtube.Playlist(global_settings.target_playlist_id)
-
-    yield f"Initializing {process_name}", 0, len(data.channels)
-
-    for i, (channel_id, channel_elem) in enumerate(data.channels.items()):
-        if stop_event.is_set():
-            raise ThreadStoppedError
-        channel_name = channel_elem.channel_name
-        yield f"{process_name} \n {channel_name}", i, len(data.channels)
-        channel_seen_list = channel_elem.seen_video_ids
-        logging.debug("Channel seen list: %s", channel_seen_list)
-        channel_selector = grab_specific_setting(global_settings, channel_elem.settings, "selector")
-
-        try:
-            c = youtube.Channel(channel_id)
-            videos_to_add: list[str] = []
-            for video_id in c.list_uploads(
-                full_videos_only=channel_selector == "full_videos_only",
-                livestreams_only=channel_selector == "livestreams_only",
-                shorts_only=channel_selector == "shorts_only",
-            ):
-                logging.info("Video ID: %s - %s", video_id, type(video_id))
-                if stop_event.is_set():
-                    raise ThreadStoppedError
-                if video_id in channel_seen_list:
-                    break
-                videos_to_add.append(video_id)
-            success = True
-            for i, video_id in enumerate(reversed(videos_to_add)):
-                if stop_event.is_set():
-                    raise ThreadStoppedError
-                success = bool(success * target_playlist.add_video(video_id))
-                if success:
-                    channel_seen_list.insert(0, video_id)
-                    channel_seen_list = channel_seen_list[0 : int(os.getenv("keep_video_ids", "50"))]
-                    if i > 15 and i % 10 == 0:
-                        data.channels[channel_id].seen_video_ids = channel_seen_list
-                        write_settings(file, data)
-            if success:
-                data.channels[channel_id].seen_video_ids = channel_seen_list
-                write_settings(file, data)
-        except youtube.SkippableError as error:
-            logging.error("Skippable exception caught - will be skipped over. Channel: %s - Msg: %s", channel_name, str(error))
-
-
 def process(file: str, stop_event: Event) -> Generator[tuple[str, int, int]]:
     data = read_settings(file)
     global_settings = data.global_settings
@@ -141,6 +94,11 @@ def process(file: str, stop_event: Event) -> Generator[tuple[str, int, int]]:
     for i, (channel_id, channel_elem) in enumerate(data.channels.items()):
         if stop_event.is_set():
             raise ThreadStoppedError
+
+        channel_disabled: bool = grab_specific_setting(global_settings, channel_elem.settings, "disabled")
+        if channel_disabled is True:
+            continue
+
         channel_name = channel_elem.channel_name
         yield f"{process_name} \n {channel_name}", i, len(data.channels)
         channel_seen_list = channel_elem.seen_video_ids

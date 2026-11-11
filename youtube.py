@@ -110,7 +110,7 @@ class Youtube:
     VIDEO_PATTERN = r"(?:https?://(?:www\.)?(?:(?:youtube\.com/(?:watch\?v=|shorts/)|youtu.be/)))?([\w\-]{11})"
     PLAYLIST_PATTERN = r"https?://(?:www\.)?youtube\.com/playlist\?list=([\w\-]+)"
     CHANNEL_ID_PATTERN = r"https?://(?:www\.)?youtube\.com/channel/(UC[\w\-]{22})$"
-    CHANNEL_HANDLE_PATTERN = r"https?://(?:www\.)?youtube\.com/(@[\w\-]+)$"
+    CHANNEL_HANDLE_PATTERN = r"https?://(?:www\.)?youtube\.com/(@[\w\-]+)/?"
 
     def __init__(self) -> None:
         load_dotenv()

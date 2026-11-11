@@ -21,8 +21,7 @@ import auto_adder
 import centralfunctions as cf
 import youtube
 from colors import colors
-
-# from simple_video_player import VideoPlayer  # noqa: ERA001
+from simple_video_player import VideoPlayer
 
 
 class ConfigureSpecificAutoAdd(cf.SubWindow):
@@ -864,7 +863,7 @@ class MainMenu:
         ttk.Button(root, text="Auto Playlist Adder", command=self.auto_add_window, width=self.btn_width).pack(padx=5, pady=5)
         ttk.Button(root, text="Download Channel Icon", command=self.download_channel_icon, width=self.btn_width).pack(padx=5, pady=5)
         ttk.Button(root, text="Remove Playlist entries up to index", command=self.remove_playlist_entries, width=self.btn_width).pack(padx=5, pady=5)
-        # ttk.Button(root, text="Simple Video Player", command=self.simple_video_player, width=self.btn_width).pack(padx=5, pady=5)  # noqa: ERA001
+        ttk.Button(root, text="Simple Video Player", command=self.simple_video_player, width=self.btn_width).pack(padx=5, pady=5)
 
     def about(self) -> None:
         msg = """Development:
@@ -893,9 +892,9 @@ http.cat/status/204 - Placeholder image for Simple Video Player"""
         self.root.withdraw()
         RemovePlaylistEntriesUpToIndex(self.root)
 
-    # def simple_video_player(self) -> None:
-    #     self.root.withdraw()  # noqa: ERA001
-    #     VideoPlayer(self.root)  # noqa: ERA001
+    def simple_video_player(self) -> None:
+        self.root.withdraw()
+        VideoPlayer(self.root)
 
     def on_close(self) -> None:
         self.root.destroy()
@@ -903,17 +902,17 @@ http.cat/status/204 - Placeholder image for Simple Video Player"""
 
 def custom_title_bar(root: tk.Tk | tk.Toplevel, title: str = "testing") -> None:
     def start_move(event: Any) -> None:
-        root._offset_x = event.x_root - root.winfo_x()  # type:ignore #pylint:disable=protected-access
-        root._offset_y = event.y_root - root.winfo_y()  # type:ignore #pylint:disable=protected-access
+        root._offset_x = event.x_root - root.winfo_x()  # type: ignore #pylint:disable=protected-access
+        root._offset_y = event.y_root - root.winfo_y()  # type: ignore #pylint:disable=protected-access
 
     def do_move(event: Any) -> None:
-        x = event.x_root - root._offset_x  # type:ignore #pylint:disable=protected-access
-        y = event.y_root - root._offset_y  # type:ignore #pylint:disable=protected-access
+        x = event.x_root - root._offset_x  # type: ignore #pylint:disable=protected-access
+        y = event.y_root - root._offset_y  # type: ignore #pylint:disable=protected-access
         root.geometry(f"+{x}+{y}")
 
     def stop_move(_: Any) -> None:
-        root._offset_x = 0  # type:ignore #pylint:disable=protected-access
-        root._offset_y = 0  # type:ignore #pylint:disable=protected-access
+        root._offset_x = 0  # type: ignore #pylint:disable=protected-access
+        root._offset_y = 0  # type: ignore #pylint:disable=protected-access
 
     def close_button_on_enter(_: Any) -> None:
         close_button["background"] = colors["red-4"]

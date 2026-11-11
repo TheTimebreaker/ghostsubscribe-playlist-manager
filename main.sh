@@ -3,4 +3,4 @@
 # Exit immediately if something fails
 set -e
 
-./.venv/bin/python ./main.py
+./.venv-linux/bin/python ./main.py "$@"

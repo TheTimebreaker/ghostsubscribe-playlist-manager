@@ -1,6 +1,29 @@
+[project]
+name="ghostsubscribe-playlist-manager"
+version="0.0.1"
+description="A tool for effortlessly manage ghost subscriptions and playlists on YouTube"
+authors=[{name="TheTimebreaker"}]
+readme="README.md"
+requires-python=">=3.14"
+dependencies = [
+  "wget~=3.2",
+  "pydantic~=2.13.3",
+  "dotenv~=0.9.9",
+  "google-api-python-client~=2.175.0",
+  "google-auth-oauthlib~=1.2.2",
+  "google-auth-httplib2~=0.2.0",
+]
+
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.package-data]
+ghostsubscribe-playlist-manager = ["py.typed"]
+
 [tool.ruff]
 line-length = 150
-target-version = "py313"
+target-version = "py314"
 
 exclude = [
   ".venv",
@@ -49,10 +72,10 @@ ignore-paths = [".venv"]
 
 [tool.black]
 line-length = 150
-target-version = ["py313"]
+target-version = ["py314"]
 
 [tool.mypy]
-python_version = "3.13"
+python_version = "3.14"
 disallow_untyped_calls = false
 disallow_untyped_defs = true
 disallow_incomplete_defs = true
@@ -60,15 +83,12 @@ disallow_any_generics = false
 check_untyped_defs = true
 warn_unused_ignores = true
 warn_return_any = true
-# strict_optional = true # activate later
 
 
 [[tool.mypy.overrides]]
 module = [
   "tkinter",
-  "vlc",
   "wget",
   "yt_dlp",
-
 ]
 ignore_missing_imports = true
