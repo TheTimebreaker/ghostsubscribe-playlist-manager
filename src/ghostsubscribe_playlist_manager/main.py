@@ -46,11 +46,7 @@ def main() -> None:
         raise
 
     window = MainWindow(run_directly=args.automaticautoadder)
-    if args.automaticautoadder:
-        window.hide()
-        window.auto_adders.run_finished.connect(lambda _: app.quit())
-    else:
-        window.show()
+    window.show()
 
     app.exec()
 

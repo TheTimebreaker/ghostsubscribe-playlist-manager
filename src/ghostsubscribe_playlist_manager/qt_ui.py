@@ -384,14 +384,11 @@ class AutoAdderWorker(QThread):
 
 
 class AutoAdderPanel(QWidget):
-    run_finished = Signal(bool)
-
     def __init__(self, parent: QWidget, run_directly: bool = False) -> None:
         super().__init__(parent)
         self.stop_event = threading.Event()
         self.worker: AutoAdderWorker | None = None
         self.run_directly = run_directly
-        self._close_when_done = False
         self.close_when_done = False
         self._last_run_success = False
 
@@ -519,9 +516,8 @@ class AutoAdderPanel(QWidget):
     def _start_direct_run(self) -> None:
         if not self.adder_paths:
             QMessageBox.information(self, "No auto adders", "There are no auto adders to run.")
-            self.run_finished.emit(False)
             return
-        self.run_paths(self.adder_paths, close_when_done=True)
+        self.run_paths(self.adder_paths)
 
     def _run_all_or_cancel(self) -> None:
         if self.worker and self.worker.isRunning():
@@ -531,11 +527,10 @@ class AutoAdderPanel(QWidget):
             return
         self.run_paths(self.adder_paths)
 
-    def run_paths(self, paths: list[Path], close_when_done: bool = False) -> None:
+    def run_paths(self, paths: list[Path]) -> None:
         if not paths:
             return
         self.stop_event = threading.Event()
-        self._close_when_done = close_when_done
         self._set_running(True)
         self.worker = AutoAdderWorker(paths, self.stop_event)
         self.worker.progress.connect(self._update_progress)
@@ -567,9 +562,7 @@ class AutoAdderPanel(QWidget):
         self.progress_label.setText(error or "Finished.")
 
     def _worker_finished(self) -> None:
-        if self._close_when_done:
-            self.run_finished.emit(self._last_run_success)
-        elif self._last_run_success and self.exit_after_run_checkbox.isChecked():
+        if self._last_run_success and self.exit_after_run_checkbox.isChecked():
             self.window().close()
         elif self._last_run_success and not self.close_when_done:
             QMessageBox.information(self, "Success", "Auto adder finished successfully.")
@@ -580,7 +573,6 @@ class AutoAdderPanel(QWidget):
     @override
     def closeEvent(self, event: Any) -> None:
         if self.worker and self.worker.isRunning():
-            self._close_when_done = False
             self.stop_event.set()
             self.run_all_button.setText("Cancelling...")
             self.run_all_button.setEnabled(False)
