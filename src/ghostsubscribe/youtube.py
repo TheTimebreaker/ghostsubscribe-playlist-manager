@@ -207,11 +207,11 @@ class Video(Youtube):
             ]
         ],
         fields: str | None = None,
-    ) -> dict | None:
+    ) -> dict[Any, Any] | None:
         # doc: https://developers.google.com/youtube/v3/docs/videos/list
         request = self.build.videos().list(part=",".join(part), fields=fields, id=self.id, maxResults=1)
         response = request.execute()
-        data: dict = response["items"][0]
+        data: dict[Any, Any] = response["items"][0]
         return data
 
     def verify(self) -> bool:
@@ -239,7 +239,7 @@ class Playlist(Youtube):
         self,
         part: list[Literal["contentDetails", "snippet", "id", "status"]],
         fields: str | None = None,
-    ) -> Generator[dict]:
+    ) -> Generator[dict[Any, Any]]:
         # docs: https://developers.google.com/youtube/v3/docs/playlistItems/list
         next_page_token = None
         while True:
@@ -388,13 +388,13 @@ class Channel(Youtube):
             ]
         ],
         fields: str | None = None,
-    ) -> dict:
+    ) -> dict[Any, Any]:
         request = self.build.channels().list(
             part=",".join(part),
             fields=fields,
             id=self.id,
         )
-        response: dict = request.execute()
+        response: dict[Any, Any] = request.execute()
         logging.info(json.dumps(response, indent=4))
         return response
 
@@ -423,7 +423,7 @@ class Channel(Youtube):
         return Playlist(self.playlist_upload_id)
 
     def get_profile_image(self, specific_size: int | bool = False) -> str:
-        thumbnails: dict = self.get_data(part=["snippet"], fields="items/snippet/thumbnails")["items"][0]["snippet"]["thumbnails"]
+        thumbnails: dict[Any, Any] = self.get_data(part=["snippet"], fields="items/snippet/thumbnails")["items"][0]["snippet"]["thumbnails"]
 
         max_height = -1
         max_url = ""

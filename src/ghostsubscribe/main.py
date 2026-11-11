@@ -384,7 +384,7 @@ class AutoAddWindow(cf.SubWindow):
         label.pack(padx=self.padx, pady=self.pady)
 
         cfg_path = os.path.abspath("auto_adder_config")
-        self.start_buttons: list[tuple[ttk.Button, Callable, bool | None]] = []
+        self.start_buttons: list[tuple[ttk.Button, Callable, bool | None]] = []  # type: ignore
         for file in os.listdir(cfg_path):
             if file == "template.json":
                 continue
@@ -892,17 +892,17 @@ TheTimebreaker"""
 
 def custom_title_bar(root: tk.Tk | tk.Toplevel, title: str = "testing") -> None:
     def start_move(event: Any) -> None:
-        root._offset_x = event.x_root - root.winfo_x()
-        root._offset_y = event.y_root - root.winfo_y()
+        root._offset_x = event.x_root - root.winfo_x()  # type: ignore
+        root._offset_y = event.y_root - root.winfo_y()  # type: ignore
 
     def do_move(event: Any) -> None:
-        x = event.x_root - root._offset_x
-        y = event.y_root - root._offset_y
+        x = event.x_root - root._offset_x  # type: ignore
+        y = event.y_root - root._offset_y  # type: ignore
         root.geometry(f"+{x}+{y}")
 
     def stop_move(_: Any) -> None:
-        root._offset_x = 0
-        root._offset_y = 0
+        root._offset_x = 0  # type: ignore
+        root._offset_y = 0  # type: ignore
 
     def close_button_on_enter(_: Any) -> None:
         close_button["background"] = colors["red-4"]
