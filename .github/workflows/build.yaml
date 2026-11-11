@@ -108,6 +108,7 @@ jobs:
             libxi6 \
             libxfixes3 \
             libxkbcommon-x11-0 \
+            appstreamcli \
 
       - parallel:
         - name: Run PyInstaller (Linux)
