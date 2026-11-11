@@ -169,7 +169,7 @@ jobs:
 
           mkdir -p "$APPIMAGE_DIR/usr/bin/$APP_NAME"
           cp -a "$APP_DIR/." "$APPIMAGE_DIR/usr/bin/$APP_NAME/"
-          cp ./img/icon-linux.png "$APPIMAGE_DIR/$APP_NAME.png"
+          cp ./img/icon-Linux.png "$APPIMAGE_DIR/$APP_NAME.png"
           echo "$APP_VERSION" > "$APPIMAGE_DIR/VERSION"
 
           APPIMAGETOOL="${RUNNER_TEMP}/appimagetool-x86_64.AppImage"
