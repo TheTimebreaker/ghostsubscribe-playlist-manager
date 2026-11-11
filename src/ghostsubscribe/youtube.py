@@ -11,9 +11,9 @@ from dotenv import load_dotenv
 from google.auth.exceptions import RefreshError
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
-from google_auth_oauthlib.flow import InstalledAppFlow
-from googleapiclient.discovery import build
-from googleapiclient.errors import HttpError
+from google_auth_oauthlib.flow import InstalledAppFlow  # type: ignore
+from googleapiclient.discovery import build  # type: ignore
+from googleapiclient.errors import HttpError  # type: ignore
 
 
 class UnskippableError(Exception):
@@ -209,7 +209,7 @@ class Video(Youtube):
         fields: str | None = None,
     ) -> dict | None:
         # doc: https://developers.google.com/youtube/v3/docs/videos/list
-        request = self.build.videos().list(part=",".join(part), fields=fields, id=self.id, maxResults=1)  # pylint:disable=no-member
+        request = self.build.videos().list(part=",".join(part), fields=fields, id=self.id, maxResults=1)
         response = request.execute()
         data: dict = response["items"][0]
         return data
@@ -243,7 +243,7 @@ class Playlist(Youtube):
         # docs: https://developers.google.com/youtube/v3/docs/playlistItems/list
         next_page_token = None
         while True:
-            request = self.build.playlistItems().list(  # pylint:disable=no-member
+            request = self.build.playlistItems().list(
                 part=",".join(part),
                 fields=fields,
                 playlistId=self.id,
@@ -261,7 +261,7 @@ class Playlist(Youtube):
     def add_video(self, video_id: str) -> bool:
 
         try:
-            request = self.build.playlistItems().insert(  # pylint:disable=no-member
+            request = self.build.playlistItems().insert(
                 part="snippet",
                 body={
                     "snippet": {
@@ -310,7 +310,7 @@ class Playlist(Youtube):
                 assert tmp_results
                 video_playlist_id = tmp_results
 
-            del_request = self.build.playlistItems().delete(id=video_playlist_id)  # pylint:disable=no-member
+            del_request = self.build.playlistItems().delete(id=video_playlist_id)
             del_request.execute()
             return True
         except AssertionError:
@@ -330,7 +330,7 @@ class Playlist(Youtube):
 
     def verify(self) -> bool:
         try:
-            request = self.build.playlistItems().list(  # pylint:disable=no-member
+            request = self.build.playlistItems().list(
                 part="id",
                 playlistId=self.id,
                 maxResults=1,
@@ -362,7 +362,7 @@ class Channel(Youtube):
         return string
 
     def _convert_handle_to_id(self, handle: str) -> str:
-        request = self.build.channels().list(  # pylint:disable=no-member
+        request = self.build.channels().list(
             part="id",
             forHandle=handle,
         )
@@ -389,7 +389,7 @@ class Channel(Youtube):
         ],
         fields: str | None = None,
     ) -> dict:
-        request = self.build.channels().list(  # pylint:disable=no-member
+        request = self.build.channels().list(
             part=",".join(part),
             fields=fields,
             id=self.id,

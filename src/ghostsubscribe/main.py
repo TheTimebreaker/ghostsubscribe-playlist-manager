@@ -347,7 +347,7 @@ class CreateNewAutoAdd(cf.SubWindow):
         AutoAddWindow(self.root)
 
 
-class AutoAddWindow(cf.SubWindow):  # pylint:disable=too-many-instance-attributes
+class AutoAddWindow(cf.SubWindow):
     def __init__(self, root: tk.Tk, rundirectly: bool = False) -> None:
         self.root = root
         self.window = tk.Toplevel(self.root)
@@ -479,7 +479,7 @@ class AutoAddWindow(cf.SubWindow):  # pylint:disable=too-many-instance-attribute
         self.start_buttons.append((button, packed, None))
         button.pack(padx=self.padx, pady=self.pady)
 
-    def use_main_button(self, filepath: str, button: ttk.Button, use_threading: bool = True) -> None | bool:
+    def use_main_button(self, filepath: str, button: ttk.Button, use_threading: bool = True) -> bool | None:
         self.disable_buttons()
         if use_threading:
             self.worker = threading.Thread(target=self._use_main_button, args=(filepath, button), daemon=True)
@@ -515,7 +515,7 @@ class AutoAddWindow(cf.SubWindow):  # pylint:disable=too-many-instance-attribute
         self.progress_label.config(text=f"{progress+1} / {total} - {msg}")
 
 
-class AddToPlaylistWindow(cf.SubWindow):  # pylint:disable=too-many-instance-attributes
+class AddToPlaylistWindow(cf.SubWindow):
     def __init__(self, root: tk.Tk) -> None:
         self.root = root
         self.window = tk.Toplevel(self.root)
@@ -756,7 +756,7 @@ class DownloadChannelIconWindow(cf.SubWindow):
         self.download_button.configure(style="Success.TButton")
 
 
-class RemovePlaylistEntriesUpToIndex(cf.SubWindow):  # pylint:disable=too-many-instance-attributes
+class RemovePlaylistEntriesUpToIndex(cf.SubWindow):
     def __init__(self, root: tk.Tk) -> None:
         self.root = root
         self.window = tk.Toplevel(self.root)
@@ -892,17 +892,17 @@ TheTimebreaker"""
 
 def custom_title_bar(root: tk.Tk | tk.Toplevel, title: str = "testing") -> None:
     def start_move(event: Any) -> None:
-        root._offset_x = event.x_root - root.winfo_x()  # type: ignore #pylint:disable=protected-access
-        root._offset_y = event.y_root - root.winfo_y()  # type: ignore #pylint:disable=protected-access
+        root._offset_x = event.x_root - root.winfo_x()
+        root._offset_y = event.y_root - root.winfo_y()
 
     def do_move(event: Any) -> None:
-        x = event.x_root - root._offset_x  # type: ignore #pylint:disable=protected-access
-        y = event.y_root - root._offset_y  # type: ignore #pylint:disable=protected-access
+        x = event.x_root - root._offset_x
+        y = event.y_root - root._offset_y
         root.geometry(f"+{x}+{y}")
 
     def stop_move(_: Any) -> None:
-        root._offset_x = 0  # type: ignore #pylint:disable=protected-access
-        root._offset_y = 0  # type: ignore #pylint:disable=protected-access
+        root._offset_x = 0
+        root._offset_y = 0
 
     def close_button_on_enter(_: Any) -> None:
         close_button["background"] = colors["red-4"]

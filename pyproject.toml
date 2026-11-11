@@ -91,4 +91,6 @@ warn_return_any = true
 
 [[tool.mypy.overrides]]
 module = [
+  "wget",
 ]
+ignore_missing_imports = true
