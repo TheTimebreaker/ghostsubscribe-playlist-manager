@@ -1,0 +1,51 @@
+name: Linters
+
+on:
+  push:
+    tags:
+      - "v*"
+      - "test*"
+  pull_request:
+
+concurrency:
+  group: lint-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: sh
+
+jobs:
+  linter:
+    name: Run all the linters
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup Python
+        uses: ./.github/actions/setup-python
+        with:
+          groups: dev
+
+      - name: Install system dependencies # required for jactionlint / shellcheck
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y shellcheck
+
+      - name: Run ruff
+        run: uv run ruff check .
+
+      - name: Run black
+        run: uv run black --check .
+
+      - name: Run mypy
+        run: uv run mypy .
+
+      - name: Run jactionlint
+        run: uv run jactionlint
