@@ -3,4 +3,5 @@
 # Exit immediately if something fails
 set -e
 
-./.venv-linux/bin/python ./main.py "$@"
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+"$SCRIPT_DIR/.venv-linux/bin/python" "$SCRIPT_DIR/src/launcher.py" "$@"

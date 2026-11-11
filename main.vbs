@@ -1,10 +1,13 @@
 ' Create a shell object
 Set objShell = CreateObject("WScript.Shell")
+Set objFSO = CreateObject("Scripting.FileSystemObject")
+objShell.CurrentDirectory = objFSO.GetParentFolderName(WScript.ScriptFullName)
 
-' Run the command to activate the virtual environment and execute the Python script
+' Run the Qt application from the project virtual environment
 Dim strArgs
-strArgs = "cmd /c .\.venv-windows\Scripts\activate && py .\main.py && .\.venv-windows\Scripts\deactivate"
+strArgs = "cmd /c .\.venv\Scripts\python.exe .\src\launcher.py"
 objShell.Run strArgs, 0, False
 
 ' Cleanup
 Set objShell = Nothing
+Set objFSO = Nothing

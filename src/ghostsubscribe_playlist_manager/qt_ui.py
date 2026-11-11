@@ -1,0 +1,703 @@
+from __future__ import annotations
+
+import logging
+import os
+import platform
+import subprocess
+import threading
+from collections.abc import Callable
+from pathlib import Path
+from typing import Any, override
+
+import wget
+from PySide6.QtCore import QObject, Qt, QThread, QTimer, Signal
+from PySide6.QtGui import QAction
+from PySide6.QtWidgets import (
+    QButtonGroup,
+    QComboBox,
+    QDialog,
+    QFileDialog,
+    QFormLayout,
+    QHBoxLayout,
+    QInputDialog,
+    QLabel,
+    QLineEdit,
+    QMainWindow,
+    QMenuBar,
+    QMessageBox,
+    QPlainTextEdit,
+    QProgressBar,
+    QPushButton,
+    QRadioButton,
+    QSpinBox,
+    QVBoxLayout,
+    QWidget,
+)
+
+from . import auto_adder, youtube
+from .config import config
+
+LOGGER = logging.getLogger(__name__)
+AUTO_ADDER_PATH = Path("auto_adder_config")
+VIDEO_FILTERS = (
+    ("All videos", "all_videos"),
+    ("Full videos only", "full_videos_only"),
+    ("Livestreams only", "livestreams_only"),
+    ("Shorts only", "shorts_only"),
+)
+
+
+def show_error(parent: QWidget, title: str, message: str) -> None:
+    QMessageBox.critical(parent, title, message)
+
+
+def handle_error(parent: QWidget, title: str) -> None:
+    LOGGER.exception("%s", title)
+    show_error(parent, title, "The operation failed. See the application log for details.")
+
+
+class LogBridge(QObject):
+    message = Signal(str)
+
+
+class WindowLogHandler(logging.Handler):
+    def __init__(self, bridge: LogBridge, level: int = logging.ERROR) -> None:
+        super().__init__(level)
+        self.bridge = bridge
+
+    def emit(self, record: logging.LogRecord) -> None:
+        self.bridge.message.emit(self.format(record))
+
+
+class LoggedDialog(QDialog):
+    def __init__(self, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self.log_display = QPlainTextEdit(self)
+        self.log_display.setReadOnly(True)
+        self.log_display.setMaximumBlockCount(1000)
+        self.log_display.hide()
+        self.log_bridge = LogBridge(self)
+        self.log_bridge.message.connect(self._show_log)
+        self.log_handler = WindowLogHandler(self.log_bridge)
+        logging.getLogger().addHandler(self.log_handler)
+        self.finished.connect(self._detach_log_handler)
+
+    def _show_log(self, message: str) -> None:
+        if not self.log_display.isVisible():
+            layout = self.layout()
+            if layout is None:
+                raise RuntimeError("The dialog layout has not been initialized.")
+            layout.addWidget(self.log_display)
+            self.log_display.show()
+        self.log_display.appendPlainText(message)
+
+    def _detach_log_handler(self, _: int = 0) -> None:
+        logging.getLogger().removeHandler(self.log_handler)
+
+    @override
+    def closeEvent(self, event: Any) -> None:
+        self._detach_log_handler()
+        super().closeEvent(event)
+
+
+class MainWindow(QMainWindow):
+    def __init__(self) -> None:
+        super().__init__()
+        self.setWindowTitle("YouTube manager")
+        self.setMinimumWidth(420)
+
+        about_menu = self.menuBar().addMenu("About")
+        about_action = QAction("Show about", self)
+        about_action.triggered.connect(self.about)
+        about_menu.addAction(about_action)
+
+        content = QWidget(self)
+        layout = QVBoxLayout(content)
+        actions: tuple[tuple[str, Callable[[], None]], ...] = (
+            ("Add to Playlist", self.add_to_playlist),
+            ("Auto Playlist Adder", self.open_auto_adder),
+            ("Download Channel Icon", self.download_channel_icon),
+            ("Remove Playlist entries up to index", self.remove_playlist_entries),
+        )
+        for label, callback in actions:
+            button = QPushButton(label, content)
+            button.clicked.connect(callback)
+            layout.addWidget(button)
+        layout.addStretch()
+        self.setCentralWidget(content)
+
+    def about(self) -> None:
+        QMessageBox.about(self, "About", "Development:\nTheTimebreaker\n\nContributors:\nTheTimebreaker")
+
+    def add_to_playlist(self) -> None:
+        AddToPlaylistDialog(self).exec()
+
+    def open_auto_adder(self) -> None:
+        AutoAdderDialog(self).exec()
+
+    def download_channel_icon(self) -> None:
+        DownloadChannelIconDialog(self).exec()
+
+    def remove_playlist_entries(self) -> None:
+        RemovePlaylistEntriesDialog(self).exec()
+
+
+class AddToPlaylistDialog(LoggedDialog):
+    SOURCES = ("Video", "Playlist", "Channel Uploads")
+
+    def __init__(self, parent: QWidget) -> None:
+        super().__init__(parent)
+        self.setWindowTitle("Add to playlist")
+        layout = QVBoxLayout(self)
+        layout.addWidget(QLabel("Please select your options for adding something to a playlist.", self))
+
+        self.source_group = QButtonGroup(self)
+        source_layout = QFormLayout()
+        self.source_entries: dict[str, QLineEdit] = {}
+        self.source_radios: dict[str, QRadioButton] = {}
+        for index, source in enumerate(self.SOURCES):
+            radio = QRadioButton(source, self)
+            entry = QLineEdit(self)
+            radio.toggled.connect(lambda checked, entry=entry: entry.setEnabled(checked))
+            self.source_group.addButton(radio, index)
+            source_layout.addRow(radio, entry)
+            self.source_entries[source] = entry
+            self.source_radios[source] = radio
+        self.source_radios["Video"].setChecked(True)
+        layout.addLayout(source_layout)
+
+        self.filter_combo = QComboBox(self)
+        for label, _ in VIDEO_FILTERS:
+            self.filter_combo.addItem(label)
+        self.filter_combo.hide()
+        layout.addWidget(self.filter_combo)
+        self.source_radios["Channel Uploads"].toggled.connect(self.filter_combo.setVisible)
+
+        form = QFormLayout()
+        self.target_entry = QLineEdit(self)
+        form.addRow("Target playlist ID:", self.target_entry)
+        layout.addLayout(form)
+        self._add_buttons(layout, self.confirm, self.reject)
+
+    def confirm(self) -> None:
+        source = self.SOURCES[self.source_group.checkedId()]
+        source_id = self.source_entries[source].text().strip()
+        target_id = self.target_entry.text().strip()
+        if not source_id:
+            show_error(self, "Missing source", f"No source {source} ID given.")
+            return
+        if not target_id:
+            show_error(self, "Missing target", "No target playlist ID given.")
+            return
+
+        try:
+            target = youtube.Playlist(target_id)
+            if not target.verify():
+                show_error(self, "Invalid playlist", "The entered target playlist ID is invalid.")
+                return
+
+            if source == "Video":
+                video = youtube.Video(source_id)
+                if not video.verify():
+                    show_error(self, "Invalid video", "The entered source video ID is invalid.")
+                    return
+                success = youtube.add_video_to_playlist(video.id, target_playlist=target)
+            elif source == "Playlist":
+                playlist = youtube.Playlist(source_id)
+                if not playlist.verify():
+                    show_error(self, "Invalid playlist", "The entered source playlist ID is invalid.")
+                    return
+                success = youtube.add_playlist_to_playlist(src_playlist=playlist, target_playlist=target)
+            else:
+                channel = youtube.Channel(source_id)
+                if not channel.verify():
+                    show_error(self, "Invalid channel", "The entered source channel ID is invalid.")
+                    return
+                filter_value = VIDEO_FILTERS[self.filter_combo.currentIndex()][1]
+                success = youtube.add_channeluploads_to_playlist(
+                    src_channel=channel,
+                    target_playlist=target,
+                    full_videos_only=filter_value == "full_videos_only",
+                    livestreams_only=filter_value == "livestreams_only",
+                    shorts_only=filter_value == "shorts_only",
+                )
+        except Exception:
+            handle_error(self, "Could not add content to the playlist")
+            return
+
+        if success:
+            QMessageBox.information(self, "Success", "All videos have been successfully added to your target playlist.")
+            self.accept()
+        else:
+            show_error(self, "Adding failed", "Some videos could not be added to your target playlist.")
+
+    def _add_buttons(self, layout: QVBoxLayout, confirm: Callable[[], None], cancel: Callable[[], None]) -> None:
+        buttons = QHBoxLayout()
+        ok_button = QPushButton("Confirm", self)
+        ok_button.clicked.connect(confirm)
+        cancel_button = QPushButton("Cancel", self)
+        cancel_button.clicked.connect(cancel)
+        buttons.addWidget(ok_button)
+        buttons.addWidget(cancel_button)
+        layout.addLayout(buttons)
+
+
+class RemovePlaylistEntriesDialog(LoggedDialog):
+    def __init__(self, parent: QWidget) -> None:
+        super().__init__(parent)
+        self.setWindowTitle("Remove Playlist entries up to index")
+        layout = QVBoxLayout(self)
+        form = QFormLayout()
+        self.playlist_entry = QLineEdit(self)
+        form.addRow("Playlist ID:", self.playlist_entry)
+        self.index = QSpinBox(self)
+        self.index.setRange(1, 5000)
+        self.index.setValue(1)
+        form.addRow("Remove this many videos:", self.index)
+        layout.addLayout(form)
+        buttons = QHBoxLayout()
+        remove_button = QPushButton("Remove", self)
+        remove_button.clicked.connect(self.confirm)
+        cancel_button = QPushButton("Cancel", self)
+        cancel_button.clicked.connect(self.reject)
+        buttons.addWidget(remove_button)
+        buttons.addWidget(cancel_button)
+        layout.addLayout(buttons)
+
+    def confirm(self) -> None:
+        playlist_id = self.playlist_entry.text().strip()
+        if not playlist_id:
+            show_error(self, "Missing playlist", "No source playlist ID given.")
+            return
+        try:
+            playlist = youtube.Playlist(playlist_id)
+            if not playlist.verify():
+                show_error(self, "Invalid playlist", "The entered playlist ID is invalid.")
+                return
+            success = True
+            removed = 0
+            for index, video in enumerate(playlist.yield_elements(["id"])):
+                if index >= self.index.value():
+                    break
+                success = playlist.remove_video(video_playlist_id=video["id"]) and success
+                removed += 1
+        except Exception:
+            handle_error(self, "Could not remove playlist entries")
+            return
+
+        if success:
+            QMessageBox.information(self, "Success", f"Removed {removed} playlist entr{'y' if removed == 1 else 'ies'}.")
+            self.accept()
+        else:
+            show_error(self, "Removal failed", "Some playlist entries could not be removed.")
+
+
+class DownloadChannelIconDialog(LoggedDialog):
+    def __init__(self, parent: QWidget) -> None:
+        super().__init__(parent)
+        self.setWindowTitle("Download Channel Icon")
+        layout = QVBoxLayout(self)
+        form = QFormLayout()
+        self.channel_entry = QLineEdit(self)
+        form.addRow("Channel ID / URL:", self.channel_entry)
+        self.dimensions = QSpinBox(self)
+        self.dimensions.setRange(0, 5000)
+        self.dimensions.setValue(900)
+        form.addRow("Image dimensions (pixels):", self.dimensions)
+
+        location_layout = QHBoxLayout()
+        self.location_entry = QLineEdit(self)
+        self.location_entry.setReadOnly(True)
+        self.location_entry.setPlaceholderText("Select a download folder")
+        location_layout.addWidget(self.location_entry)
+        browse_button = QPushButton("Select Location", self)
+        browse_button.clicked.connect(self.select_location)
+        location_layout.addWidget(browse_button)
+        form.addRow("Download location:", location_layout)
+        layout.addLayout(form)
+
+        self.download_button = QPushButton("Download Image", self)
+        self.download_button.setEnabled(False)
+        self.download_button.clicked.connect(self.download)
+        self.channel_entry.textChanged.connect(self._update_enabled)
+        self.location_entry.textChanged.connect(self._update_enabled)
+        layout.addWidget(self.download_button)
+        cancel_button = QPushButton("Close", self)
+        cancel_button.clicked.connect(self.reject)
+        layout.addWidget(cancel_button)
+
+    def _update_enabled(self) -> None:
+        self.download_button.setEnabled(bool(self.channel_entry.text().strip() and self.location_entry.text()))
+
+    def select_location(self) -> None:
+        path = QFileDialog.getExistingDirectory(self, "Select download location")
+        if path:
+            self.location_entry.setText(path)
+
+    def download(self) -> None:
+        try:
+            channel = youtube.Channel(self.channel_entry.text().strip())
+            if not channel.verify():
+                show_error(self, "Invalid channel", "The Channel ID / URL could not be verified.")
+                return
+            url = channel.get_profile_image(self.dimensions.value())
+            destination = os.path.join(self.location_entry.text(), channel.id + ".jpg")
+            wget.download(url, destination)
+        except Exception:
+            handle_error(self, "Could not download the channel icon")
+            return
+        QMessageBox.information(self, "Success", f"Channel icon saved to:\n{destination}")
+        self.accept()
+
+
+class AutoAdderWorker(QThread):
+    progress = Signal(str, int, int)
+    completed = Signal(bool, str)
+
+    def __init__(self, paths: list[Path], stop_event: threading.Event) -> None:
+        super().__init__()
+        self.paths = paths
+        self.stop_event = stop_event
+
+    def run(self) -> None:
+        try:
+            for path in self.paths:
+                for message, progress, total in auto_adder.process(str(path), self.stop_event):
+                    self.progress.emit(message, progress, total)
+        except auto_adder.ThreadStoppedError:
+            self.completed.emit(False, "Auto adder was cancelled.")
+        except Exception as error:
+            LOGGER.exception("Auto adder failed.")
+            self.completed.emit(False, str(error))
+        else:
+            self.completed.emit(not self.stop_event.is_set(), "")
+
+
+class AutoAdderDialog(LoggedDialog):
+    def __init__(self, parent: QWidget, run_directly: bool = False) -> None:
+        super().__init__(parent)
+        self.setWindowTitle("Auto Adder")
+        self.stop_event = threading.Event()
+        self.worker: AutoAdderWorker | None = None
+        self.run_directly = run_directly
+        self._close_when_done = False
+
+        layout = QVBoxLayout(self)
+        menu_bar = QMenuBar(self)
+        config_menu = menu_bar.addMenu("Config")
+        create_action = QAction("Create new Auto Adder", self)
+        create_action.triggered.connect(self.create_auto_adder)
+        config_action = QAction("Configure Existing Auto Adder", self)
+        config_action.triggered.connect(self.configure_auto_adder)
+        config_menu.addAction(create_action)
+        config_menu.addAction(config_action)
+        self.config_menu = config_menu
+        layout.setMenuBar(menu_bar)
+
+        heading = QLabel("Please choose an auto adder to run.", self)
+        heading.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(heading)
+        self.adders_layout = layout
+        self.adder_buttons: list[QPushButton] = []
+        self.adder_paths: list[Path] = []
+
+        self.progress_label = QLabel("", self)
+        layout.addWidget(self.progress_label)
+        self.progress = QProgressBar(self)
+        self.progress.hide()
+        layout.addWidget(self.progress)
+        self.run_all_button = QPushButton("Run All", self)
+        self.run_all_button.clicked.connect(self._run_all_or_cancel)
+        layout.addWidget(self.run_all_button)
+        close_button = QPushButton("Close", self)
+        close_button.clicked.connect(self.reject)
+        layout.addWidget(close_button)
+        self._reload()
+
+        if run_directly:
+            self.run_all_button.setEnabled(bool(self.adder_paths))
+            QTimer.singleShot(0, self._start_direct_run)
+
+    def create_auto_adder(self) -> None:
+        dialog = CreateAutoAdderDialog(self)
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            self._reload()
+
+    def configure_auto_adder(self) -> None:
+        if not self.adder_paths:
+            show_error(self, "No auto adders", "There are no auto adders to configure.")
+            return
+        names = [auto_adder.read_settings(str(path)).global_settings.name for path in self.adder_paths]
+        selected, accepted = QInputDialog.getItem(self, "Configure Auto Adder", "Choose an auto adder:", names, 0, False)
+        if accepted:
+            path = self.adder_paths[names.index(selected)]
+            if ConfigureAutoAdderDialog(path, self).exec() == QDialog.DialogCode.Accepted:
+                self._reload()
+
+    def _reload(self) -> None:
+        for button in self.adder_buttons:
+            self.adders_layout.removeWidget(button)
+            button.deleteLater()
+        self.adder_buttons.clear()
+        self.adder_paths.clear()
+        try:
+            paths = sorted(path for path in AUTO_ADDER_PATH.iterdir() if path.is_file() and path.name != "template.json")
+            for path in paths:
+                settings = auto_adder.read_settings(str(path))
+                button = QPushButton(settings.global_settings.name, self)
+                button.clicked.connect(lambda _checked=False, item=path: self.run_paths([item]))
+                self.adder_buttons.append(button)
+                self.adder_paths.append(path)
+                self.adders_layout.insertWidget(self.adders_layout.indexOf(self.progress_label), button)
+        except Exception:
+            handle_error(self, "Could not load auto-adder configurations")
+
+    def _start_direct_run(self) -> None:
+        if not self.adder_paths:
+            QMessageBox.information(self, "No auto adders", "There are no auto adders to run.")
+            self.accept()
+            return
+        self.run_paths(self.adder_paths, close_when_done=True)
+
+    def _run_all_or_cancel(self) -> None:
+        if self.worker and self.worker.isRunning():
+            self.stop_event.set()
+            self.run_all_button.setText("Cancelling...")
+            self.run_all_button.setEnabled(False)
+            return
+        self.run_paths(self.adder_paths)
+
+    def run_paths(self, paths: list[Path], close_when_done: bool = False) -> None:
+        if not paths:
+            return
+        self.stop_event = threading.Event()
+        self._close_when_done = close_when_done
+        self._set_running(True)
+        self.worker = AutoAdderWorker(paths, self.stop_event)
+        self.worker.progress.connect(self._update_progress)
+        self.worker.completed.connect(self._complete)
+        self.worker.start()
+
+    def _set_running(self, running: bool) -> None:
+        for button in self.adder_buttons:
+            button.setEnabled(not running)
+        self.config_menu.setEnabled(not running)
+        self.run_all_button.setEnabled(True)
+        self.run_all_button.setText("Cancel" if running else "Run All")
+        self.progress.setVisible(running)
+
+    def _update_progress(self, message: str, current: int, total: int) -> None:
+        self.progress.setMaximum(max(total, 1))
+        self.progress.setValue(min(current + 1, max(total, 1)))
+        self.progress_label.setText(f"{current + 1} / {total} - {message.replace(chr(10), ' ')}")
+
+    def _complete(self, success: bool, error: str) -> None:
+        self._set_running(False)
+        if self._close_when_done and success:
+            self.accept()
+            return
+        if success:
+            QMessageBox.information(self, "Success", "Auto adder finished successfully.")
+        elif error and error != "Auto adder was cancelled.":
+            show_error(self, "Auto adder failed", error)
+        self.progress_label.setText(error or "Finished.")
+
+    @override
+    def closeEvent(self, event: Any) -> None:
+        if self.worker and self.worker.isRunning():
+            self._close_when_done = False
+            self.stop_event.set()
+            self.run_all_button.setText("Cancelling...")
+            self.run_all_button.setEnabled(False)
+            event.ignore()
+            return
+        super().closeEvent(event)
+class CreateAutoAdderDialog(QDialog):
+    def __init__(self, parent: QWidget) -> None:
+        super().__init__(parent)
+        self.setWindowTitle("Create Auto Adder")
+        layout = QVBoxLayout(self)
+        form = QFormLayout()
+        self.filename = QLineEdit(self)
+        form.addRow("Filename:", self.filename)
+        self.display_name = QLineEdit(self)
+        form.addRow("Display name:", self.display_name)
+        self.target_playlist = QLineEdit(self)
+        form.addRow("Target playlist:", self.target_playlist)
+        self.selector = QComboBox(self)
+        for label, value in VIDEO_FILTERS:
+            self.selector.addItem(label, value)
+        form.addRow("Video filter:", self.selector)
+        layout.addLayout(form)
+        self._add_buttons(layout, self.create_adder)
+
+    def create_adder(self) -> None:
+        filename = self.filename.text().strip()
+        name = self.display_name.text().strip()
+        target_id = self.target_playlist.text().strip()
+        if not filename or not name or not target_id:
+            show_error(self, "Missing fields", "Please fill in the filename, display name, and target playlist.")
+            return
+        if Path(filename).name != filename or filename in {".", ".."}:
+            show_error(self, "Invalid filename", "Enter a filename without folder paths.")
+            return
+        filename = filename.removesuffix(".json") + ".json"
+        path = AUTO_ADDER_PATH / filename
+        if path.exists():
+            show_error(self, "Filename exists", "Choose a filename that does not already exist.")
+            return
+        try:
+            playlist = youtube.Playlist(target_id)
+            if not playlist.verify():
+                show_error(self, "Invalid playlist", "The target playlist entered is invalid.")
+                return
+            auto_adder.create(filename, name, playlist.id, self.selector.currentData())
+        except Exception:
+            handle_error(self, "Could not create auto adder")
+            return
+        QMessageBox.information(self, "Success", "New auto adder successfully created.")
+        self.accept()
+
+    def _add_buttons(self, layout: QVBoxLayout, action: Callable[[], None]) -> None:
+        buttons = QHBoxLayout()
+        confirm = QPushButton("Create", self)
+        confirm.clicked.connect(action)
+        cancel = QPushButton("Cancel", self)
+        cancel.clicked.connect(self.reject)
+        buttons.addWidget(confirm)
+        buttons.addWidget(cancel)
+        layout.addLayout(buttons)
+
+
+class ConfigureAutoAdderDialog(QDialog):
+    def __init__(self, filepath: Path, parent: QWidget) -> None:
+        super().__init__(parent)
+        self.filepath = filepath
+        self.old_config = auto_adder.read_settings(str(filepath))
+        self.new_config = self.old_config.model_copy(deep=True)
+        self.setWindowTitle(f"Configure: {self.old_config.global_settings.name}")
+        layout = QVBoxLayout(self)
+        form = QFormLayout()
+        self.name = QLineEdit(self.old_config.global_settings.name, self)
+        form.addRow("Display name:", self.name)
+        self.target = QLineEdit(self.old_config.global_settings.target_playlist_id, self)
+        form.addRow("Target playlist:", self.target)
+        self.selector = QComboBox(self)
+        for label, value in VIDEO_FILTERS:
+            self.selector.addItem(label, value)
+        self.selector.setCurrentIndex(self.selector.findData(self.old_config.global_settings.selector))
+        form.addRow("Video filter:", self.selector)
+        layout.addLayout(form)
+
+        layout.addWidget(QLabel("Add a channel to this auto adder", self))
+        channel_form = QFormLayout()
+        self.channel_id = QLineEdit(self)
+        channel_form.addRow("Channel ID / URL:", self.channel_id)
+        self.channel_name = QLineEdit(self)
+        channel_form.addRow("Channel name:", self.channel_name)
+        self.channel_filter = QComboBox(self)
+        for label, value in VIDEO_FILTERS:
+            self.channel_filter.addItem(label, value)
+        channel_form.addRow("Video filter:", self.channel_filter)
+        layout.addLayout(channel_form)
+
+        mode_layout = QHBoxLayout()
+        self.add_new_videos = QRadioButton("Add new videos", self)
+        self.add_all_videos = QRadioButton("Add all videos", self)
+        self.add_new_videos.setChecked(True)
+        mode_layout.addWidget(self.add_new_videos)
+        mode_layout.addWidget(self.add_all_videos)
+        layout.addLayout(mode_layout)
+
+        add_channel = QPushButton("Add channel", self)
+        add_channel.clicked.connect(self.add_channel_to_config)
+        layout.addWidget(add_channel)
+        open_file = QPushButton("Save & Open file", self)
+        open_file.clicked.connect(self.save_and_open)
+        layout.addWidget(open_file)
+        buttons = QHBoxLayout()
+        save_back = QPushButton("Save & Back", self)
+        save_back.clicked.connect(self.save)
+        cancel = QPushButton("Cancel", self)
+        cancel.clicked.connect(self.reject)
+        buttons.addWidget(save_back)
+        buttons.addWidget(cancel)
+        layout.addLayout(buttons)
+
+    def add_channel_to_config(self) -> None:
+        channel_id = self.channel_id.text().strip()
+        channel_name = self.channel_name.text().strip()
+        if not channel_id or not channel_name:
+            show_error(self, "Missing fields", "Enter both a channel ID/URL and a channel name.")
+            return
+        try:
+            channel = youtube.Channel(channel_id)
+            if not channel.verify():
+                show_error(self, "Invalid channel", "The channel ID / URL could not be verified.")
+                return
+            if channel.id in self.new_config.channels:
+                show_error(self, "Channel exists", "This channel is already in the auto-adder.")
+                return
+            selector = self.channel_filter.currentData()
+            seen_ids = (
+                list(
+                    channel.list_uploads(
+                        size=config.kept_video_ids,
+                        full_videos_only=selector == "full_videos_only",
+                        livestreams_only=selector == "livestreams_only",
+                        shorts_only=selector == "shorts_only",
+                    )
+                )
+                if self.add_new_videos.isChecked()
+                else []
+            )
+            self.new_config.channels[channel.id] = auto_adder.SettingsChannels(
+                channel_name=channel_name,
+                seen_video_ids=seen_ids,
+                settings=auto_adder.PerChannelSettings(selector=selector),
+            )
+        except Exception:
+            handle_error(self, "Could not add channel")
+            return
+        self.channel_id.clear()
+        self.channel_name.clear()
+        QMessageBox.information(self, "Channel added", "The channel will be saved with the auto-adder configuration.")
+
+    def _save(self) -> bool:
+        name = self.name.text().strip()
+        target_id = self.target.text().strip()
+        if not name or not target_id:
+            show_error(self, "Missing fields", "Display name and target playlist are required.")
+            return False
+        try:
+            target = youtube.Playlist(target_id)
+            if not target.verify():
+                show_error(self, "Invalid playlist", "The target playlist could not be verified.")
+                return False
+            self.new_config.global_settings.name = name
+            self.new_config.global_settings.target_playlist_id = target.id
+            self.new_config.global_settings.selector = self.selector.currentData()
+            auto_adder.write_settings(str(self.filepath), self.new_config)
+        except Exception:
+            handle_error(self, "Could not save auto-adder configuration")
+            return False
+        return True
+
+    def save(self) -> None:
+        if self._save():
+            self.accept()
+
+    def save_and_open(self) -> None:
+        if not self._save():
+            return
+        try:
+            if platform.system() == "Windows":
+                os.startfile(str(self.filepath))
+            elif platform.system() == "Darwin":
+                subprocess.Popen(("open", str(self.filepath)))
+            else:
+                subprocess.Popen(("xdg-open", str(self.filepath)))
+        except Exception:
+            handle_error(self, "Could not open configuration file")
+            return
+        self.accept()
