@@ -251,12 +251,14 @@ dependencies = [
     { name = "google-auth-httplib2" },
     { name = "google-auth-oauthlib" },
     { name = "pydantic" },
-    { name = "pyinstaller" },
     { name = "pyside6" },
     { name = "wget" },
 ]
 
 [package.dev-dependencies]
+build = [
+    { name = "pyinstaller" },
+]
 dev = [
     { name = "black" },
     { name = "jactionlint" },
@@ -270,12 +272,12 @@ requires-dist = [
     { name = "google-auth-httplib2", specifier = ">=0.4.4" },
     { name = "google-auth-oauthlib", specifier = ">=1.5.0" },
     { name = "pydantic", specifier = ">=2.14.3" },
-    { name = "pyinstaller", specifier = ">=6.22.3" },
     { name = "pyside6", specifier = ">=6.12.0" },
     { name = "wget", specifier = ">=3.2" },
 ]
 
 [package.metadata.requires-dev]
+build = [{ name = "pyinstaller", specifier = ">=6.22.3" }]
 dev = [
     { name = "black", specifier = ">=26.10.1" },
     { name = "jactionlint", specifier = ">=2.5.0" },
