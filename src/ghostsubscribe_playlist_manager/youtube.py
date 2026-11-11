@@ -1,18 +1,18 @@
 from __future__ import annotations
 
-import json
-import logging
-import os
-import re
-from collections.abc import Generator
-from typing import Any, Literal
+lazy import json
+lazy import logging
+lazy import os
+lazy import re
+lazy from collections.abc import Generator
+lazy from typing import Any, Literal
 
-from google.auth.exceptions import RefreshError
-from google.auth.transport.requests import Request
-from google.oauth2.credentials import Credentials
-from google_auth_oauthlib.flow import InstalledAppFlow  # type: ignore
-from googleapiclient.discovery import build  # type: ignore
-from googleapiclient.errors import HttpError  # type: ignore
+lazy from google.auth.exceptions import RefreshError
+lazy from google.auth.transport.requests import Request
+lazy from google.oauth2.credentials import Credentials
+lazy from google_auth_oauthlib.flow import InstalledAppFlow  # type: ignore
+lazy from googleapiclient.discovery import build  # type: ignore
+lazy from googleapiclient.errors import HttpError  # type: ignore
 
 from .config import CREDENTIALS_PATH, TOKEN_PATH
 

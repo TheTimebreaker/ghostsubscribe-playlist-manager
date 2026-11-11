@@ -1,14 +1,14 @@
 from __future__ import annotations
 
-import argparse
-import logging
+lazy import argparse
+lazy import logging
 
-from PySide6.QtGui import Qt
-from PySide6.QtWidgets import QApplication
+lazy from PySide6.QtGui import Qt
+lazy from PySide6.QtWidgets import QApplication
 
-from . import youtube
-from .config import Config, Theme, config
-from .qt_ui import MainWindow
+lazy from . import youtube
+lazy from .config import Config, Theme, config
+lazy from .qt_ui import MainWindow
 
 
 def configure_app_style(app: QApplication, settings: Config) -> None:

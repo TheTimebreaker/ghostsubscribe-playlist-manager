@@ -1,16 +1,16 @@
 from __future__ import annotations
 
-import logging
-import os
-import threading
-from collections.abc import Callable
-from pathlib import Path
-from typing import Any, override
+lazy import logging
+lazy import os
+lazy import threading
+lazy from collections.abc import Callable
+lazy from pathlib import Path
+lazy from typing import Any, override
 
-import wget
-from PySide6.QtCore import QObject, QThread, QTimer, Signal
-from PySide6.QtGui import QAction
-from PySide6.QtWidgets import (
+lazy import wget
+lazy from PySide6.QtCore import QObject, QThread, QTimer, Signal
+lazy from PySide6.QtGui import QAction
+lazy from PySide6.QtWidgets import (
     QButtonGroup,
     QCheckBox,
     QComboBox,
@@ -33,8 +33,8 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from . import auto_adder, youtube
-from .config import config
+lazy from . import auto_adder, youtube
+lazy from .config import config
 
 LOGGER = logging.getLogger(__name__)
 AUTO_ADDER_PATH = Path("auto_adder_config")

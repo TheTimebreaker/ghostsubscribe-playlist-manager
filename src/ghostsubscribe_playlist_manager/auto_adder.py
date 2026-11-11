@@ -1,14 +1,14 @@
-import json
 import logging
-import os
-import tempfile
-from collections.abc import Generator
-from threading import Event
 from typing import Any, Literal
+lazy import json
+lazy import os
+lazy import tempfile
+lazy from collections.abc import Generator
+lazy from threading import Event
 
-from pydantic import BaseModel
+lazy from pydantic import BaseModel
 
-from . import youtube
+lazy from . import youtube
 
 ChannelUploadFilter = Literal["all_videos", "full_videos_only", "livestreams_only", "shorts_only"]
 PlaylistEntryFilter = Literal["all_videos", "new_entries_from_the_top"]
