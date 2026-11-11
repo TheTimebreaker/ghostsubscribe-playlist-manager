@@ -2,8 +2,6 @@ from __future__ import annotations
 
 import logging
 import os
-import platform
-import subprocess
 import threading
 from collections.abc import Callable
 from pathlib import Path
@@ -690,16 +688,12 @@ class ConfigureAutoAdderDialog(QDialog):
         add_channel = QPushButton("Add channel", self)
         add_channel.clicked.connect(self.add_channel_to_config)
         layout.addWidget(add_channel)
-        open_file = QPushButton("Save & Open file", self)
-        open_file.clicked.connect(self.save_and_open)
-        layout.addWidget(open_file)
+        layout.addWidget(divider)
+
         buttons = QHBoxLayout()
-        save_back = QPushButton("Save & Back", self)
+        save_back = QPushButton("Save", self)
         save_back.clicked.connect(self.save)
-        cancel = QPushButton("Cancel", self)
-        cancel.clicked.connect(self.reject)
         buttons.addWidget(save_back)
-        buttons.addWidget(cancel)
         layout.addLayout(buttons)
 
     def add_channel_to_config(self) -> None:
@@ -764,18 +758,3 @@ class ConfigureAutoAdderDialog(QDialog):
     def save(self) -> None:
         if self._save():
             self.accept()
-
-    def save_and_open(self) -> None:
-        if not self._save():
-            return
-        try:
-            if platform.system() == "Windows":
-                os.startfile(str(self.filepath))
-            elif platform.system() == "Darwin":
-                subprocess.Popen(("open", str(self.filepath)))
-            else:
-                subprocess.Popen(("xdg-open", str(self.filepath)))
-        except Exception:
-            handle_error(self, "Could not open configuration file")
-            return
-        self.accept()
