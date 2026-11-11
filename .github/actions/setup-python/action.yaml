@@ -1,0 +1,62 @@
+# SPDX-FileCopyrightText: (c) TagStudio Contributors
+# SPDX-License-Identifier: CC0-1.0
+---
+name: Setup Python
+description: Combination of Python setup actions
+
+inputs:
+  groups:
+    description: Newline-separated list of dependency groups to install
+
+runs:
+  using: composite
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+      with:
+        python-version-file: ".python-version"
+
+    - name: Install UV
+      uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+
+    - name: Install Dependencies (Windows)
+      if: runner.os == 'Windows'
+      env:
+        INPUT_GROUPS: ${{ inputs.groups }}
+      shell: pwsh
+      run: |
+        if (![string]::IsNullOrEmpty(${env:INPUT_GROUPS})) {
+            $groupArgs = -split ${env:INPUT_GROUPS} -replace '^', '--group='
+        }
+
+        uv sync --locked --no-managed-python ${groupArgs}
+
+    - name: Install Dependencies (non-Windows)
+      if: runner.os != 'Windows'
+      env:
+        INPUT_GROUPS: ${{ inputs.groups }}
+      shell: bash
+      run: |
+        extra_args=()
+
+        if [ -n "${INPUT_GROUPS}" ]; then
+            while IFS= read -r group; do
+                if [ -n "${group}" ]; then
+                    extra_args+=("--group=${group}")
+                fi
+            done <<<"${INPUT_GROUPS}"
+        fi
+
+        uv sync --locked --no-managed-python "${extra_args[@]}"
+        
+    - name: Enable venv (Windows)
+      if: runner.os == 'Windows'
+      shell: pwsh
+      run: |
+        .venv/Scripts/activate
+
+    - name: Enable venv (non-Windows)
+      if: runner.os != 'Windows'
+      shell: bash
+      run: |
+        source ./.venv/bin/activate

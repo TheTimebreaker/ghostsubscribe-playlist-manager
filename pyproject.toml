@@ -17,8 +17,12 @@ dependencies = [
 [dependency-groups]
 dev = [
     "black>=26.10.1",
+    "jactionlint>=2.5.0",
     "mypy>=2.4.1",
     "ruff>=0.17.4",
+]
+build = [
+  "pyinstaller>=6.22.3",
 ]
 
 [build-system]
