@@ -1,19 +1,20 @@
 from __future__ import annotations
 
-import json
-import logging
-import os
-import re
-from collections.abc import Generator
-from typing import Any, Literal
+lazy import json
+lazy import logging
+lazy import os
+lazy import re
+lazy from collections.abc import Generator
+lazy from typing import Any, Literal
 
-from dotenv import load_dotenv
-from google.auth.exceptions import RefreshError
-from google.auth.transport.requests import Request
-from google.oauth2.credentials import Credentials
-from google_auth_oauthlib.flow import InstalledAppFlow  # type:ignore
-from googleapiclient.discovery import build  # type:ignore
-from googleapiclient.errors import HttpError  # type:ignore
+lazy from google.auth.exceptions import RefreshError
+lazy from google.auth.transport.requests import Request
+lazy from google.oauth2.credentials import Credentials
+lazy from google_auth_oauthlib.flow import InstalledAppFlow  # type: ignore
+lazy from googleapiclient.discovery import build  # type: ignore
+lazy from googleapiclient.errors import HttpError  # type: ignore
+
+from .config import CREDENTIALS_PATH, TOKEN_PATH
 
 
 class UnskippableError(Exception):
@@ -113,7 +114,6 @@ class Youtube:
     CHANNEL_HANDLE_PATTERN = r"https?://(?:www\.)?youtube\.com/(@[\w\-]+)/?"
 
     def __init__(self) -> None:
-        load_dotenv()
         self.scope = ["https://www.googleapis.com/auth/youtube.force-ssl"]
         self.creds = self._authorize(self.scope)
         self.build = build_with_wrapped_execute("youtube", "v3", credentials=self.creds)
@@ -139,10 +139,8 @@ class Youtube:
             return creds
 
         creds = None
-        client_secret_path = os.getenv("GOOGLE_CLIENT_SECRET", "credentials.json")
-        assert client_secret_path
-        client_token_path = os.getenv("GOOGLE_CLIENT_TOKEN", "token.json")
-        assert client_token_path
+        client_secret_path = CREDENTIALS_PATH
+        client_token_path = TOKEN_PATH
 
         if os.path.exists(client_token_path):
             creds = read_creds()
@@ -207,11 +205,11 @@ class Video(Youtube):
             ]
         ],
         fields: str | None = None,
-    ) -> dict | None:
+    ) -> dict[Any, Any] | None:
         # doc: https://developers.google.com/youtube/v3/docs/videos/list
-        request = self.build.videos().list(part=",".join(part), fields=fields, id=self.id, maxResults=1)  # pylint:disable=no-member
+        request = self.build.videos().list(part=",".join(part), fields=fields, id=self.id, maxResults=1)
         response = request.execute()
-        data: dict = response["items"][0]
+        data: dict[Any, Any] = response["items"][0]
         return data
 
     def verify(self) -> bool:
@@ -239,11 +237,11 @@ class Playlist(Youtube):
         self,
         part: list[Literal["contentDetails", "snippet", "id", "status"]],
         fields: str | None = None,
-    ) -> Generator[dict]:
+    ) -> Generator[dict[Any, Any]]:
         # docs: https://developers.google.com/youtube/v3/docs/playlistItems/list
         next_page_token = None
         while True:
-            request = self.build.playlistItems().list(  # pylint:disable=no-member
+            request = self.build.playlistItems().list(
                 part=",".join(part),
                 fields=fields,
                 playlistId=self.id,
@@ -261,7 +259,7 @@ class Playlist(Youtube):
     def add_video(self, video_id: str) -> bool:
 
         try:
-            request = self.build.playlistItems().insert(  # pylint:disable=no-member
+            request = self.build.playlistItems().insert(
                 part="snippet",
                 body={
                     "snippet": {
@@ -310,7 +308,7 @@ class Playlist(Youtube):
                 assert tmp_results
                 video_playlist_id = tmp_results
 
-            del_request = self.build.playlistItems().delete(id=video_playlist_id)  # pylint:disable=no-member
+            del_request = self.build.playlistItems().delete(id=video_playlist_id)
             del_request.execute()
             return True
         except AssertionError:
@@ -330,14 +328,14 @@ class Playlist(Youtube):
 
     def verify(self) -> bool:
         try:
-            request = self.build.playlistItems().list(  # pylint:disable=no-member
+            request = self.build.playlistItems().list(
                 part="id",
                 playlistId=self.id,
                 maxResults=1,
             )
             request.execute()
             return True
-        except (ResourceNotFoundError, InvalidValueError):
+        except ResourceNotFoundError, InvalidValueError:
             return False
 
 
@@ -362,7 +360,7 @@ class Channel(Youtube):
         return string
 
     def _convert_handle_to_id(self, handle: str) -> str:
-        request = self.build.channels().list(  # pylint:disable=no-member
+        request = self.build.channels().list(
             part="id",
             forHandle=handle,
         )
@@ -388,13 +386,13 @@ class Channel(Youtube):
             ]
         ],
         fields: str | None = None,
-    ) -> dict:
-        request = self.build.channels().list(  # pylint:disable=no-member
+    ) -> dict[Any, Any]:
+        request = self.build.channels().list(
             part=",".join(part),
             fields=fields,
             id=self.id,
         )
-        response: dict = request.execute()
+        response: dict[Any, Any] = request.execute()
         logging.info(json.dumps(response, indent=4))
         return response
 
@@ -423,7 +421,7 @@ class Channel(Youtube):
         return Playlist(self.playlist_upload_id)
 
     def get_profile_image(self, specific_size: int | bool = False) -> str:
-        thumbnails: dict = self.get_data(part=["snippet"], fields="items/snippet/thumbnails")["items"][0]["snippet"]["thumbnails"]
+        thumbnails: dict[Any, Any] = self.get_data(part=["snippet"], fields="items/snippet/thumbnails")["items"][0]["snippet"]["thumbnails"]
 
         max_height = -1
         max_url = ""

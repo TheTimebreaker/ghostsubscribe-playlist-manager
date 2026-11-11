@@ -2,7 +2,7 @@
 ## A tool for effortlessly manage ghost subscriptions and playlists on YouTube.
 This tool nor any aspect associated with it is endorsed by YouTube.
 
-
+The desktop interface is built with PySide6 (Qt).
 
 
 # What is it
@@ -24,7 +24,7 @@ When starting this program, you can choose between the different tools provided 
 
 # Get started (hopefully beginner friendly!)
 ## Requirements (before this guide)
-* Python 3.13 (grab the latest release from [here](https://www.python.org/downloads))
+* Python 3.15 or newer (grab the latest release from [here](https://www.python.org/downloads))
     * Depending on your installation method, you will need to type different things into your command line to access python features. For ease of use, <strong>I recommend installing pylauncher together with your python installation.</strong>.
     * Since there are a few different commands possible, I will be listing some alternative commands where necessary.
 * A Google account / a YouTube account
@@ -36,20 +36,21 @@ Since this is still in very active development and since I have no idea how this
     * Don't put the extracted folder into protected folders like Windows' `Program Files` folders.
 3. Open the folder in your command line tool of choice.
     * If you are unsure how to do this, search for `<operating system> command line navigate to specific folder` on the internet.
-    * To test whether you are in the correct folder, type in `py main.py`, `python main.py`, or `python.exe main.py`. If you are in the correct folder, the program should immediately exit due to a `ModuleNotFoundError`. Don't worry about what that means, cuz we will prevent it from happening again in the next step.
+    * To test whether you are in the correct folder, type in `py src\launcher.py`, `python src\launcher.py`, or `python.exe src\launcher.py`. If you are in the correct folder, the program should immediately exit due to a `ModuleNotFoundError`. Don't worry about what that means, cuz we will prevent it from happening again in the next step.
 4. Create a virtual environment by running the command `py -m venv .venv`
     * Alternative commands:
     * `python -m venv .venv`
     * `python.exe -m venv .venv`
 5. Activate a virtual environment by running the command `.venv\Scripts\activate`
     * Depending on your command line, this should now display an indication that you are using a virtual environment somewhere in your command line window.
-6. Install the required modules by running the command `py -m pip install -r requirements.txt`.
+6. Install the required modules by running the command `py -m pip install -e .`.
     * Alternative commands:
-    * `python -m pip install -r requirements.txt`
-    * `python.exe -m pip install -r requirements.txt`
-    * `pip install -r requirements.txt`
+    * `python -m pip install -e .`
+    * `python.exe -m pip install -e .`
+    * `pip install -e .`
 
 This will setup python so that it can function properly.
+Start the application with `py src\launcher.py` (or use the included launch script for your platform).
 Next, we need to give the code credentials, so that it can add things to your own playlists.
 For that, we need to setup the Google Cloud Console once.
 1. Visit the [Google Cloud Console](https://console.cloud.google.com) and log into your account.

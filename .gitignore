@@ -1,11 +1,13 @@
-/.venv
-/.venv-linux
-/.venv-windows
+/.venv*
 /__pycache__
 /.mypy_cache
+/.vscode
 /output
 /build
 /dist
+*/*.egg-info
+*.pyc
+
 /auto_adder_config/*
 !auto_adder_config/template.json
 
