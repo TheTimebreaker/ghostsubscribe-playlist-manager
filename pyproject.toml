@@ -1,10 +1,10 @@
 [project]
 name="ghostsubscribe-playlist-manager"
-version="0.0.1"
+version="0.1.0"
 description="A tool for effortlessly manage ghost subscriptions and playlists on YouTube"
 authors=[{name="TheTimebreaker"}]
 readme="README.md"
-requires-python=">=3.14"
+requires-python=">=3.15"
 dependencies = [
   "wget~=3.2",
   "pydantic~=2.13.3",
@@ -23,8 +23,7 @@ ghostsubscribe-playlist-manager = ["py.typed"]
 
 [tool.ruff]
 line-length = 150
-target-version = "py314"
-
+target-version = "py315"
 exclude = [
   ".venv",
   "build",
@@ -32,6 +31,7 @@ exclude = [
   "__pycache__",
   "__init__.py",
 ]
+extension = { spec = "python" }
 
 [tool.ruff.lint]
 select = [
@@ -56,39 +56,35 @@ select = [
   "RUF", #Ruff specifics
 ]
 extend-select = ["N815", "N816"]
-
 ignore = [
   "ANN401", #allow type:Any
+  "TD003", #Missing issue link for this TODOs
+  "TD002", #Missing author in TODO
 ]
+
 
 [tool.pylint."MASTER"]
 disable = ["all"]
-enable = [
-  "W1203", #fstring in logging
-  "C0103", #invalid name
-]
-ignore-paths = [".venv"]
 
 
 [tool.black]
 line-length = 150
-target-version = ["py314"]
+target-version = ["py315"]
+include = '\.(pyi?|spec)$'
+
 
 [tool.mypy]
-python_version = "3.14"
-disallow_untyped_calls = false
+python_version = "3.15"
 disallow_untyped_defs = true
 disallow_incomplete_defs = true
-disallow_any_generics = false
+disallow_any_generics = true
 check_untyped_defs = true
 warn_unused_ignores = true
 warn_return_any = true
 
-
 [[tool.mypy.overrides]]
 module = [
-  "tkinter",
-  "wget",
-  "yt_dlp",
+  "pubchempy",
+  "rdkit",
+  "rdkit-stubs"
 ]
-ignore_missing_imports = true

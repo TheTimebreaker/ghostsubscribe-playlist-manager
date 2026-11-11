@@ -17,11 +17,11 @@ from typing import Any, cast
 import wget
 from dotenv import load_dotenv
 
-import auto_adder
-import centralfunctions as cf
-import youtube
-from colors import colors
-from simple_video_player import VideoPlayer
+import src.ghostsubscribe.auto_adder as auto_adder
+import src.ghostsubscribe.centralfunctions as cf
+import src.ghostsubscribe.youtube as youtube
+from src.ghostsubscribe.colors import colors
+from src.ghostsubscribe.simple_video_player import VideoPlayer
 
 
 class ConfigureSpecificAutoAdd(cf.SubWindow):

@@ -16,9 +16,9 @@ import yt_dlp
 from PIL import Image, ImageTk
 from pynput.keyboard import Listener
 
-import centralfunctions as cf
-import youtube
-from colors import colors
+import src.ghostsubscribe.centralfunctions as cf
+import src.ghostsubscribe.youtube as youtube
+from src.ghostsubscribe.colors import colors
 
 
 class YouTubeMetaData(TypedDict):
