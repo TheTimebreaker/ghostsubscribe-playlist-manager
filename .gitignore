@@ -8,8 +8,6 @@
 */*.egg-info
 *.pyc
 
-/auto_adder_config/*
-!auto_adder_config/template.json
 
 token.json
 credentials.json

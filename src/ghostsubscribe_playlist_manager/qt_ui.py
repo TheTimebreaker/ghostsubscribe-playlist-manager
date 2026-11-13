@@ -34,10 +34,9 @@ lazy from PySide6.QtWidgets import (
 )
 
 lazy from . import auto_adder, youtube
-lazy from .config import config
+lazy from .config import AUTO_ADDER_PATH, config
 
 LOGGER = logging.getLogger(__name__)
-AUTO_ADDER_PATH = Path("auto_adder_config")
 VIDEO_FILTERS = (
     ("All videos", "all_videos"),
     ("Full videos only", "full_videos_only"),
@@ -489,7 +488,7 @@ class AutoAdderPanel(QWidget):
         self.adder_rows.clear()
         self.adder_paths.clear()
         try:
-            paths = sorted(path for path in AUTO_ADDER_PATH.iterdir() if path.is_file() and path.name != "template.json")
+            paths = sorted(path for path in AUTO_ADDER_PATH.iterdir() if path.is_file())
             for path in paths:
                 settings = auto_adder.read_settings(str(path))
                 row = QWidget(self.adders_content)

@@ -65,6 +65,19 @@ def read_settings(file: str) -> Settings:
         return Settings(**raw)
 
 
+def get_blank_settings() -> Settings:
+    template = {
+        "global_settings": {
+            "name": "Template Name",
+            "target_playlist_id": "Target Playlist ID",
+            "selector": "all_videos",
+        },
+        "channels": {},
+        "playlists": {},
+    }
+    return Settings.model_validate(template)
+
+
 def write_settings(file: str, settings: Settings) -> None:
     # Serialize settings to JSON
     json_str = settings.model_dump_json(indent=4)
@@ -181,7 +194,7 @@ def process(file: str, stop_event: Event) -> Generator[tuple[str, int, int]]:
 def create(filename: str, name: str, target_playlist_id: str, selector: ChannelUploadFilter) -> None:
     if os.path.isfile(f"auto_adder_config/{filename}"):
         raise youtube.SkippableError("Auto adder can't be created, the file already exists.")
-    data = read_settings("auto_adder_config/template.json")
+    data = get_blank_settings()
     data.global_settings.name = name
     data.global_settings.target_playlist_id = target_playlist_id
     data.global_settings.selector = selector

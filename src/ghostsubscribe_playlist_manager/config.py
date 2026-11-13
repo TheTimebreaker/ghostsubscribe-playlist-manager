@@ -11,6 +11,7 @@ _pl = platformdirs.PlatformDirs("GhostSubscribe Playlist Manager", "TheTimebreak
 
 CONFIG_PATH = _pl.user_config_path / "config.json"
 CREDENTIALS_PATH = _pl.user_config_path / "credentials.json"
+AUTO_ADDER_PATH = _pl.user_config_path / "auto-adder-config"
 TOKEN_PATH = _pl.user_state_path / "token.json"
 
 CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
