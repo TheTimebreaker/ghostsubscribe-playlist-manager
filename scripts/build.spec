@@ -46,7 +46,10 @@ a = Analysis(
     pathex=["../src"],
     hex=[],
     binaries=[],
-    datas=copy_metadata("ghostsubscribe-playlist-manager"),
+    datas=[
+        *copy_metadata("ghostsubscribe-playlist-manager"),
+        ("img/icon.png", "img"),
+    ],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},
