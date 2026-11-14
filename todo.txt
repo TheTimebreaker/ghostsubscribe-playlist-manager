@@ -1,1 +1,4 @@
 add progress bar to remove to entry
+add version lookup in app + updater
+add option to reorder auto adders
+make auto adders look a bit cooler
