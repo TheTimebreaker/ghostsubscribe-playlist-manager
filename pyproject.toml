@@ -1,6 +1,6 @@
 [project]
 name="ghostsubscribe-playlist-manager"
-version="0.2.0"
+version="1.0.0"
 description="A tool for effortlessly manage ghost subscriptions and playlists on YouTube"
 authors=[{name="TheTimebreaker"}]
 readme="README.md"
