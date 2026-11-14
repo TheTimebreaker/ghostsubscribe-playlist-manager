@@ -18,6 +18,7 @@ TOKEN_PATH = _pl.user_state_path / "token.json"
 
 CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
 CREDENTIALS_PATH.parent.mkdir(parents=True, exist_ok=True)
+AUTO_ADDER_PATH.mkdir(parents=True, exist_ok=True)
 TOKEN_PATH.parent.mkdir(parents=True, exist_ok=True)
 
 
