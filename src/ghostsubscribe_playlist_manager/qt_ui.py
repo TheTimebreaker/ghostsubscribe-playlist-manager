@@ -8,7 +8,7 @@ lazy from pathlib import Path
 lazy from typing import Any, override
 
 lazy import wget
-lazy from PySide6.QtCore import QObject, QThread, QTimer, Signal
+lazy from PySide6.QtCore import QObject, Qt, QThread, QTimer, Signal
 lazy from PySide6.QtGui import QAction
 lazy from PySide6.QtWidgets import (
     QButtonGroup,
@@ -398,6 +398,11 @@ class AutoAdderPanel(QWidget):
         self.adders_layout.setContentsMargins(4, 4, 4, 4)
         self.adders_layout.setSpacing(6)
         self.adders_layout.addStretch()
+        self.empty_state_label = QLabel("No auto adders found. Start by creating one!", self.adders_content)
+        empty_state_font = self.empty_state_label.font()
+        empty_state_font.setItalic(True)
+        self.empty_state_label.setFont(empty_state_font)
+        self.empty_state_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.adders_scroll.setWidget(self.adders_content)
         layout.addWidget(self.adders_scroll, 1)
 
@@ -479,6 +484,8 @@ class AutoAdderPanel(QWidget):
         self.log_display.appendPlainText(message)
 
     def _reload(self) -> None:
+        self.adders_layout.removeWidget(self.empty_state_label)
+        self.empty_state_label.hide()
         for row in self.adder_rows:
             self.adders_layout.removeWidget(row)
             row.deleteLater()
@@ -506,6 +513,9 @@ class AutoAdderPanel(QWidget):
                 self.adder_rows.append(row)
                 self.adder_paths.append(path)
                 self.adders_layout.insertWidget(self.adders_layout.count() - 1, row)
+            if not self.adder_paths:
+                self.adders_layout.insertWidget(0, self.empty_state_label)
+                self.empty_state_label.show()
         except Exception:
             handle_error(self, "Could not load auto-adder configurations")
 
