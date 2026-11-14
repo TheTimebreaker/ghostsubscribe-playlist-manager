@@ -7,6 +7,8 @@ lazy from pydantic import BaseModel, Field
 lazy from PySide6.QtCore import Qt
 lazy from PySide6.QtWidgets import QApplication, QFileDialog, QMessageBox
 
+lazy from .__icon__ import ICON
+
 _pl = platformdirs.PlatformDirs("GhostSubscribe Playlist Manager", "TheTimebreaker")
 
 CONFIG_PATH = _pl.user_config_path / "config.json"
@@ -52,6 +54,10 @@ else:
 
 if not CREDENTIALS_PATH.is_file():
     app = QApplication.instance() or QApplication(sys.argv)
+    if not isinstance(app, QApplication):
+        raise Exception
+    app.setWindowIcon(ICON)
+
     prompt = QMessageBox()
     prompt.setIcon(QMessageBox.Icon.Warning)
     prompt.setWindowTitle("Credentials file missing")

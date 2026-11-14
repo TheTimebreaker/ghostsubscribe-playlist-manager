@@ -101,7 +101,6 @@ class LoggedDialog(QDialog):
 class MainWindow(QMainWindow):
     def __init__(self, run_directly: bool = False) -> None:
         super().__init__()
-        self.setWindowTitle("YouTube manager")
         self.setMinimumSize(640, 420)
 
         utils_menu = self.menuBar().addMenu("Utils")

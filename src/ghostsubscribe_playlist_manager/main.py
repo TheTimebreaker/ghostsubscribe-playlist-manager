@@ -7,6 +7,7 @@ lazy from PySide6.QtGui import Qt
 lazy from PySide6.QtWidgets import QApplication
 
 lazy from . import youtube
+lazy from .__icon__ import ICON
 lazy from .config import Config, Theme, config
 lazy from .qt_ui import MainWindow
 
@@ -35,6 +36,7 @@ def main() -> None:
     app = QApplication.instance() or QApplication([])
     if not isinstance(app, QApplication):
         raise Exception
+    app.setWindowIcon(ICON)
 
     app.setApplicationName("GhostSubscribe Playlist Manager")
     configure_app_style(app, config)

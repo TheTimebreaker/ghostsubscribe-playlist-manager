@@ -110,6 +110,22 @@ jobs:
             libxkbcommon-x11-0 \
             appstream \
 
+      # (Workaround for py315/pyinstaller issue)
+      - name: Expose Python 3.15 ABI compatibility DLL (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $base = & .\.venv\Scripts\python.exe -c "import sys; print(sys.base_prefix)"
+          $abiDir = Join-Path $base "abi3t-compat"
+          $dll = Join-Path $abiDir "python3t.dll"
+
+          if (Test-Path $dll) {
+              Add-Content -Path $env:GITHUB_PATH -Value $abiDir
+              Write-Host "Added ABI compatibility directory: $abiDir"
+          } else {
+              Write-Host "No separate ABI compatibility DLL found."
+          }
+
       - parallel:
         - name: Run PyInstaller (Linux)
           if: runner.os == 'Linux'
