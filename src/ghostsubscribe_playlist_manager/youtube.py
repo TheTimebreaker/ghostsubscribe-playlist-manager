@@ -168,7 +168,7 @@ class Youtube:
         if matched:
             return Channel(matched.group(1))
 
-        raise SkippableError("No valid youtube URL.")
+        raise SkippableError(f"The url {url} is not a valid youtube URL.")
 
 
 class Video(Youtube):
